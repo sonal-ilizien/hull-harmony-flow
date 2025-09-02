@@ -18,14 +18,26 @@ const Login = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Login attempted with credentials:", credentials);
+    
     // Mock authentication - in real app would validate with backend
     if (credentials.username && credentials.password && credentials.role) {
-      localStorage.setItem("user", JSON.stringify({
+      console.log("All credentials provided, proceeding with login");
+      const userData = {
         username: credentials.username,
         role: credentials.role,
         name: credentials.username.charAt(0).toUpperCase() + credentials.username.slice(1)
-      }));
+      };
+      localStorage.setItem("user", JSON.stringify(userData));
+      console.log("User data stored in localStorage:", userData);
       navigate("/dashboard");
+      console.log("Navigation to dashboard triggered");
+    } else {
+      console.log("Missing credentials:", {
+        hasUsername: !!credentials.username,
+        hasPassword: !!credentials.password,
+        hasRole: !!credentials.role
+      });
     }
   };
 
