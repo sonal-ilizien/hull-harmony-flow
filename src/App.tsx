@@ -7,6 +7,10 @@ import Login from "./pages/Login";
 import MainLayout from "./components/layout/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import FleetMaster from "./pages/masters/FleetMaster";
+import UnitMaster from "./pages/masters/UnitMaster";
+import CommandMaster from "./pages/masters/CommandMaster";
+import VesselMaster from "./pages/masters/VesselMaster";
+import DockyardMaster from "./pages/masters/DockyardMaster";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +27,10 @@ const App = () => (
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="masters/fleet" element={<FleetMaster />} />
+            <Route path="masters/unit" element={<UnitMaster />} />
+            <Route path="masters/command" element={<CommandMaster />} />
+            <Route path="masters/vessel" element={<VesselMaster />} />
+            <Route path="masters/dockyard" element={<DockyardMaster />} />
             {/* Placeholder routes for other masters */}
             <Route path="masters/*" element={<div className="p-8 text-center text-muted-foreground">Master page coming soon...</div>} />
             <Route path="dockyard/*" element={<div className="p-8 text-center text-muted-foreground">Dockyard module coming soon...</div>} />

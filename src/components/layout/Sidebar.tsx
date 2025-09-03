@@ -24,12 +24,13 @@ const sidebarItems = [
     title: "Global Masters",
     icon: Database,
     items: [
-      { title: "Fleet Master", path: "/masters/fleet" },
-      { title: "Vessel Master", path: "/masters/vessel" },
+      { title: "Unit Master", path: "/masters/unit" },
       { title: "Command Master", path: "/masters/command" },
+      { title: "Vessel Master", path: "/masters/vessel" },
       { title: "Dockyard Master", path: "/masters/dockyard" },
-      { title: "User Master", path: "/masters/user" },
-      { title: "Equipment Master", path: "/masters/equipment" }
+      { title: "Fleet Master", path: "/masters/fleet" },
+      { title: "Equipment Master", path: "/masters/equipment" },
+      { title: "User Master", path: "/masters/user" }
     ]
   },
   {
