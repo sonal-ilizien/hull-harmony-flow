@@ -28,20 +28,10 @@ const MainLayout = () => {
     setIsLoading(false);
   }, []);
 
-  console.log("MainLayout render: user =", user, "isLoading =", isLoading);
-
-  // Show loading state while checking authentication
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
   // Redirect to login if not authenticated
   if (!user) {
-    console.log("MainLayout: No user found, redirecting to /login");
     return <Navigate to="/login" replace />;
   }
-
-  console.log("MainLayout: User authenticated, rendering main layout");
 
   return (
     <div className="h-screen flex bg-background">
