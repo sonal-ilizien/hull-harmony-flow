@@ -1,48 +1,102 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { DataTable, Column } from "@/components/ui/table";
+import { Edit, Plus, Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DynamicFormDialog } from "@/components/DynamicFormDialog";
+import { get, post, put, del } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+
 
 interface Unit {
   id: number;
   name: string;
+  code?: string;
   description?: string;
-  status: string;
+  active: string;
   createdBy: string;
-  createdAt: string;
+  created_on: string;
 }
 
+
+
 const UnitMaster = () => {
-  const [units, setUnits] = useState<Unit[]>([
-    { id: 1, name: "Eastern Naval Command", description: "ENC Headquarters", status: "Active", createdBy: "Admin", createdAt: "2024-01-15" },
-    { id: 2, name: "Western Naval Command", description: "WNC Headquarters", status: "Active", createdBy: "Admin", createdAt: "2024-01-15" },
-    { id: 3, name: "Southern Naval Command", description: "SNC Headquarters", status: "Active", createdBy: "Admin", createdAt: "2024-01-15" }
-  ]);
-  
+
+
+
+  const { toast } = useToast();
+
+  const [units, setUnits] = useState<Unit[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    status: "Active"
-  });
-  
-  const { toast } = useToast();
 
-  const filteredUnits = units.filter(unit =>
-    unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    unit.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const columns: Column<Unit>[] = [
+  { header: "Unit Name", accessor: "name" },
+  { header: "code", accessor: "code" },
+  {
+      header: "Status",
+      accessor: "active",
+      render: (row) => (
+        <Badge variant={row.active === "1" ? "default" : "secondary"}>
+          {row.active === "1" ? "Active" : "Inactive"}
+        </Badge>
 
-  const handleSave = () => {
-    if (!formData.name.trim()) {
+      ),
+    },
+  {
+  header: "Actions",
+  accessor: "actions",
+  render: (row) => (
+    <div className="flex gap-2">
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => handleEdit(row)}
+      >
+        <Edit className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={() => handleDelete(row.id)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  ),
+}
+
+];
+  // Fetch units from API
+  const fetchUnits = async (pageNum: number = 1) => {
+    try {
+      const res = await get(`/master/units/?page=${pageNum}`);
+
+      setUnits(res.results || []);
+      setTotalPages(Math.ceil(res.count / 10));
+    } catch (err) {
+      console.error("Failed to fetch units", err);
+      toast({
+        title: "Error",
+        description: "Failed to fetch units",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchUnits(page);
+  }, [page]);
+
+  // Save / Update
+  const handleSave = (formData: any) => {
+    if (!formData.name?.trim()) {
       toast({
         title: "Validation Error",
         description: "Unit name is required",
@@ -52,47 +106,38 @@ const UnitMaster = () => {
     }
 
     if (editingUnit) {
-      setUnits(prev => prev.map(unit => 
-        unit.id === editingUnit.id 
-          ? { ...unit, ...formData }
-          : unit
-      ));
-      toast({
-        title: "Success",
-        description: "Unit updated successfully",
-      });
+      setUnits((prev) =>
+        prev.map((unit) =>
+          unit.id === editingUnit.id ? { ...unit, ...formData } : unit
+        )
+      );
+      toast({ title: "Success", description: "Unit updated successfully" });
     } else {
       const newUnit: Unit = {
-        id: Math.max(...units.map(u => u.id)) + 1,
-        ...formData,
-        createdBy: "Current User",
-        createdAt: new Date().toISOString().split('T')[0]
+        id: Date.now(), // temporary id
+        name: formData.name,
+        code: formData.code,
+        description: formData.description,
+        active: formData.status || "Active",
+        createdBy: "Admin",
+        created_on: new Date().toISOString(),
       };
-      setUnits(prev => [...prev, newUnit]);
-      toast({
-        title: "Success", 
-        description: "Unit created successfully",
-      });
+      setUnits((prev) => [...prev, newUnit]);
+      toast({ title: "Success", description: "Unit created successfully" });
     }
 
     setIsDialogOpen(false);
     setEditingUnit(null);
-    setFormData({ name: "", description: "", status: "Active" });
   };
 
   const handleEdit = (unit: Unit) => {
     setEditingUnit(unit);
-    setFormData({
-      name: unit.name,
-      description: unit.description || "",
-      status: unit.status
-    });
     setIsDialogOpen(true);
   };
 
   const handleDelete = (id: number) => {
     if (confirm("Are you sure you want to delete this unit?")) {
-      setUnits(prev => prev.filter(unit => unit.id !== id));
+      setUnits((prev) => prev.filter((unit) => unit.id !== id));
       toast({
         title: "Success",
         description: "Unit deleted successfully",
@@ -100,69 +145,57 @@ const UnitMaster = () => {
     }
   };
 
+  // Filter by search
+  const filteredUnits = units.filter(
+    (unit) =>
+      unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      unit.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
+      {/* Header + Add Button */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-primary">Unit Master</h1>
-          <p className="text-muted-foreground">Manage organizational units and commands</p>
+          <p className="text-muted-foreground">
+            Manage organizational units and commands
+          </p>
         </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
+
+        <DynamicFormDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          title={editingUnit ? "Edit Unit" : "Add Unit"}
+          description="Fill out the details below"
+          fields={[
+            { name: "name", label: "Unit Name", type: "text", required: true },
+            { name: "code", label: "Unit Code", type: "text" },
+            { name: "description", label: "Description", type: "textarea" },
+            {
+              name: "status",
+              label: "Status",
+              type: "dropdown",
+              options: [
+                { label: "Active", value: "Active" },
+                { label: "Inactive", value: "Inactive" },
+              ],
+            },
+          ]}
+          onSubmit={handleSave}
+          initialValues={units}
+          trigger={
+            <Button
               onClick={() => {
                 setEditingUnit(null);
-                setFormData({ name: "", description: "", status: "Active" });
+                setIsDialogOpen(true);
               }}
-              className="bg-gradient-primary"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               Add Unit
             </Button>
-          </DialogTrigger>
-          
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingUnit ? "Edit Unit" : "Add New Unit"}</DialogTitle>
-              <DialogDescription>
-                {editingUnit ? "Update unit information" : "Create a new organizational unit"}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Unit Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Enter unit name"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Input
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Enter unit description"
-                />
-              </div>
-              
-              <div className="flex gap-2 pt-4">
-                <Button onClick={handleSave} className="flex-1">
-                  {editingUnit ? "Update" : "Create"}
-                </Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </div>
 
       {/* Search */}
@@ -183,56 +216,33 @@ const UnitMaster = () => {
       {/* Units Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Units ({filteredUnits.length})</CardTitle>
+          <CardTitle>Units</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created By</TableHead>
-                <TableHead>Created Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUnits.map((unit) => (
-                <TableRow key={unit.id}>
-                  <TableCell className="font-medium">{unit.name}</TableCell>
-                  <TableCell>{unit.description || "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant={unit.status === "Active" ? "default" : "secondary"}>
-                      {unit.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{unit.createdBy}</TableCell>
-                  <TableCell>{unit.createdAt}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEdit(unit)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDelete(unit.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataTable columns={columns} data={filteredUnits} rowsPerPage={10} />
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      <div className="flex justify-center gap-2 mt-4">
+        <Button
+          variant="outline"
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+        >
+          Previous
+        </Button>
+        <span className="text-sm">
+          Page {page} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          disabled={page === totalPages}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 };

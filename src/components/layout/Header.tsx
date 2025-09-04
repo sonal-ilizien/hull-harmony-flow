@@ -25,7 +25,7 @@ interface HeaderProps {
 
 interface User {
   username: string;
-  role: string;
+  user_roles: [{ role: string }];
   name: string;
 }
 
@@ -65,6 +65,8 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
     }
   };
 
+  const role = user?.user_roles[0]?.role || "User"; // Safe access
+  
   return (
     <header className="h-16 bg-card border-b border-border shadow-card flex items-center justify-between px-6">
       {/* Left section */}
@@ -103,8 +105,8 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
                   <User className="h-5 w-5" />
                   <div className="text-left">
                     <div className="font-medium">{user.name}</div>
-                    <Badge variant={getRoleBadgeVariant(user.role)} className="text-xs">
-                      {user.role.toUpperCase()}
+                    <Badge variant={getRoleBadgeVariant(role)} className="text-xs">
+                        {role}
                     </Badge>
                   </div>
                 </div>

@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { 
-  Database, 
-  Ship, 
-  ClipboardCheck, 
-  BarChart3, 
+import {
+  Database,
+  Ship,
+  ClipboardCheck,
+  BarChart3,
   FileText,
   ChevronDown,
   Anchor,
@@ -12,7 +12,8 @@ import {
   Users,
   Building2,
   Calendar,
-  Search
+  Search,
+  PenTool
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -67,7 +68,12 @@ const sidebarItems = [
       { title: "Compliance Reports", path: "/reports/compliance" },
       { title: "Action Tracker", path: "/reports/actions" }
     ]
-  }
+  },
+  {
+    title: "Interactive Drawing",
+    icon: PenTool,
+    path: "/drawing"
+  },
 ];
 
 interface SidebarProps {
@@ -79,8 +85,8 @@ const Sidebar = ({ collapsed }: SidebarProps) => {
   const location = useLocation();
 
   const toggleExpanded = (title: string) => {
-    setExpandedItems(prev => 
-      prev.includes(title) 
+    setExpandedItems(prev =>
+      prev.includes(title)
         ? prev.filter(item => item !== title)
         : [...prev, title]
     );
@@ -89,91 +95,117 @@ const Sidebar = ({ collapsed }: SidebarProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className={cn(
-      "bg-gradient-header border-r border-border transition-all duration-300",
-      collapsed ? "w-16" : "w-64"
-    )}>
-      {/* Header */}
-      <div className="p-4 border-b border-border/20">
-        <div className="flex items-center gap-3">
-          <img src={hullInsightLogo} alt="Hull Insight" className="w-8 h-8" />
-          {!collapsed && (
-            <div className="text-primary-foreground">
-              <h2 className="font-bold text-lg">Hull Insight</h2>
-              <p className="text-xs opacity-80">Naval Operations</p>
-            </div>
-          )}
-        </div>
+    <div
+  className={cn(
+    "bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-500 shadow-naval",
+    collapsed ? "w-16" : "w-64"
+  )}
+>
+  {/* Header */}
+  <div className="p-4 border-b border-sidebar-border flex items-center gap-3 bg-gradient-header">
+    <img
+      src={hullInsightLogo}
+      alt="Hull Insight"
+      className="w-8 h-8 transition-transform duration-300 hover:scale-110"
+    />
+    {!collapsed && (
+      <div>
+        <h2 className="font-bold text-lg text-sidebar-primary">
+          Hull Insight
+        </h2>
+        <p className="text-xs text-muted-foreground">Naval Operations</p>
       </div>
+    )}
+  </div>
 
-      {/* Navigation */}
-      <nav className="p-2 space-y-1">
-        {sidebarItems.map((item) => (
-          <div key={item.title}>
-            {item.path ? (
-              // Simple nav item
-              <NavLink to={item.path}>
-                <Button
-                  variant="ghost"
-                  className={cn(
-                    "w-full justify-start text-primary-foreground hover:bg-primary-foreground/10",
-                    isActive(item.path) && "bg-primary-foreground/20"
-                  )}
-                  size={collapsed ? "icon" : "default"}
-                >
-                  <item.icon className={cn("h-4 w-4", !collapsed && "mr-2")} />
-                  {!collapsed && <span>{item.title}</span>}
-                </Button>
-              </NavLink>
-            ) : (
-              // Collapsible nav item
-              <Collapsible
-                open={expandedItems.includes(item.title)}
-                onOpenChange={() => toggleExpanded(item.title)}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-primary-foreground hover:bg-primary-foreground/10"
-                    size={collapsed ? "icon" : "default"}
-                  >
-                    <item.icon className={cn("h-4 w-4", !collapsed && "mr-2")} />
-                    {!collapsed && (
-                      <>
-                        <span className="flex-1 text-left">{item.title}</span>
-                        <ChevronDown className={cn(
-                          "h-4 w-4 transition-transform",
-                          expandedItems.includes(item.title) && "rotate-180"
-                        )} />
-                      </>
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
-                
-                {!collapsed && (
-                  <CollapsibleContent className="ml-6 space-y-1">
-                    {item.items?.map((subItem) => (
-                      <NavLink key={subItem.path} to={subItem.path}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={cn(
-                            "w-full justify-start text-primary-foreground/80 hover:bg-primary-foreground/10",
-                            isActive(subItem.path) && "bg-primary-foreground/20 text-primary-foreground"
-                          )}
-                        >
-                          {subItem.title}
-                        </Button>
-                      </NavLink>
-                    ))}
-                  </CollapsibleContent>
+  {/* Navigation */}
+  <nav className="p-2 space-y-1">
+    {sidebarItems.map((item) => (
+      <div key={item.title}>
+        {item.path ? (
+          // Simple nav item
+          <NavLink to={item.path}>
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full justify-start rounded-lg transition-all duration-300 group relative overflow-hidden",
+                isActive(item.path)
+                  ? "bg-sidebar-accent text-sidebar-foreground font-semibold shadow-card"
+                  : "hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+              )}
+              size={collapsed ? "icon" : "default"}
+            >
+              <item.icon
+                className={cn(
+                  "h-5 w-5 transition-transform duration-300 group-hover:scale-110",
+                  !collapsed && "mr-2"
                 )}
-              </Collapsible>
+              />
+              {!collapsed && <span>{item.title}</span>}
+            </Button>
+          </NavLink>
+        ) : (
+          // Collapsible nav item
+          <Collapsible
+            open={expandedItems.includes(item.title)}
+            onOpenChange={() => toggleExpanded(item.title)}
+          >
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start rounded-lg transition-all duration-300 group",
+                  "hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                )}
+                size={collapsed ? "icon" : "default"}
+              >
+                <item.icon
+                  className={cn(
+                    "h-5 w-5 transition-transform duration-300 group-hover:rotate-6",
+                    !collapsed && "mr-2"
+                  )}
+                />
+                {!collapsed && (
+                  <>
+                    <span className="flex-1 text-left">{item.title}</span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 transition-transform duration-300",
+                        expandedItems.includes(item.title) && "rotate-180"
+                      )}
+                    />
+                  </>
+                )}
+              </Button>
+            </CollapsibleTrigger>
+
+            {!collapsed && (
+              <CollapsibleContent className="ml-6 space-y-1 overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+                {item.items?.map((subItem) => (
+                  <NavLink key={subItem.path} to={subItem.path}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={cn(
+                        "w-full justify-start rounded-md transition-all duration-200",
+                        isActive(subItem.path)
+                          ? "bg-sidebar-accent text-sidebar-foreground font-semibold"
+                          : "hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                      )}
+                    >
+                      {subItem.title}
+                    </Button>
+                  </NavLink>
+                ))}
+              </CollapsibleContent>
             )}
-          </div>
-        ))}
-      </nav>
-    </div>
+          </Collapsible>
+        )}
+      </div>
+    ))}
+  </nav>
+</div>
+
   );
 };
 

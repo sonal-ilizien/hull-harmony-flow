@@ -1,14 +1,13 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Search, Ship } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Ship } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DataTable, Column } from "@/components/ui/table";
+import { DynamicFormDialog, FieldConfig } from "@/components/DynamicFormDialog";
+import { get, post, put, del } from "@/lib/api";
 
 interface Vessel {
   id: number;
@@ -25,284 +24,242 @@ interface Vessel {
 }
 
 const VesselMaster = () => {
-  const [vessels, setVessels] = useState<Vessel[]>([
-    { 
-      id: 1, 
-      name: "INS Vikrant", 
-      classOfVessel: "Vikrant Class", 
-      vesselType: "Aircraft Carrier",
-      command: "Western Naval Command",
-      dockyard: "Cochin Shipyard",
-      yearOfBuild: 2013,
-      yearOfDelivery: 2022,
-      status: "Active", 
-      createdBy: "Admin", 
-      createdAt: "2024-01-15" 
-    },
-    { 
-      id: 2, 
-      name: "INS Kolkata", 
-      classOfVessel: "Kolkata Class", 
-      vesselType: "Destroyer",
-      command: "Western Naval Command",
-      dockyard: "Mazagon Dock",
-      yearOfBuild: 2006,
-      yearOfDelivery: 2014,
-      status: "Active", 
-      createdBy: "Admin", 
-      createdAt: "2024-01-15" 
-    }
-  ]);
-  
+  const { toast } = useToast();
+  const [vessels, setVessels] = useState<Vessel[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVessel, setEditingVessel] = useState<Vessel | null>(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    classOfVessel: "",
-    vesselType: "",
-    command: "",
-    dockyard: "",
-    yearOfBuild: "",
-    yearOfDelivery: "",
-    status: "Active"
-  });
-  
-  const { toast } = useToast();
 
-  // Mock data for dropdowns
-  const classOfVessels = ["Vikrant Class", "Kolkata Class", "Delhi Class", "Rajput Class", "Shivalik Class"];
-  const vesselTypes = ["Aircraft Carrier", "Destroyer", "Frigate", "Corvette", "Submarine", "Support Vessel"];
-  const commands = ["Eastern Naval Command", "Western Naval Command", "Southern Naval Command"];
-  const dockyards = ["Cochin Shipyard", "Mazagon Dock", "Garden Reach Shipyard", "Goa Shipyard"];
+  // ✅ Table columns
+  const columns: Column<Vessel>[] = [
+    { header: "Name", accessor: "name" },
+    { header: "Class", accessor: "classOfVessel" },
+    {
+      header: "Type",
+      accessor: "vesselType",
+      render: (row) => <Badge variant="outline">{row.vesselType}</Badge>,
+    },
+    { header: "Command", accessor: "command" },
+    { header: "Dockyard", accessor: "dockyard" },
+    { header: "Year Built", accessor: "yearOfBuild" },
+    { header: "Year Delivered", accessor: "yearOfDelivery" },
+    {
+      header: "Status",
+      accessor: "status",
+      render: (row) => (
+        <Badge variant={row.status === "Active" ? "default" : "secondary"}>
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      accessor: "actions",
+      render: (row) => (
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="icon" onClick={() => handleEdit(row)}>
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleDelete(row.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
-  const filteredVessels = vessels.filter(vessel =>
-    vessel.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vessel.classOfVessel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vessel.command.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ Form fields (dropdowns will later come from APIs instead of static arrays)
+  const fields: FieldConfig[] = [
+    { name: "name", label: "Vessel Name", type: "text", required: true },
+    {
+      name: "classOfVessel",
+      label: "Class of Vessel",
+      type: "dropdown",
+      options: [
+        { label: "Vikrant Class", value: "Vikrant Class" },
+        { label: "Kolkata Class", value: "Kolkata Class" },
+        { label: "Delhi Class", value: "Delhi Class" },
+        { label: "Rajput Class", value: "Rajput Class" },
+        { label: "Shivalik Class", value: "Shivalik Class" },
+      ],
+      required: true,
+    },
+    {
+      name: "vesselType",
+      label: "Vessel Type",
+      type: "dropdown",
+      options: [
+        { label: "Aircraft Carrier", value: "Aircraft Carrier" },
+        { label: "Destroyer", value: "Destroyer" },
+        { label: "Frigate", value: "Frigate" },
+        { label: "Corvette", value: "Corvette" },
+        { label: "Submarine", value: "Submarine" },
+        { label: "Support Vessel", value: "Support Vessel" },
+      ],
+      required: true,
+    },
+    {
+      name: "command",
+      label: "Command",
+      type: "dropdown",
+      options: [
+        { label: "Eastern Naval Command", value: "Eastern Naval Command" },
+        { label: "Western Naval Command", value: "Western Naval Command" },
+        { label: "Southern Naval Command", value: "Southern Naval Command" },
+      ],
+      required: true,
+    },
+    {
+      name: "dockyard",
+      label: "Dockyard",
+      type: "dropdown",
+      options: [
+        { label: "Cochin Shipyard", value: "Cochin Shipyard" },
+        { label: "Mazagon Dock", value: "Mazagon Dock" },
+        { label: "Garden Reach Shipyard", value: "Garden Reach Shipyard" },
+        { label: "Goa Shipyard", value: "Goa Shipyard" },
+      ],
+    },
+    {
+      name: "yearOfBuild",
+      label: "Year of Build",
+      type: "number",
+    },
+    {
+      name: "yearOfDelivery",
+      label: "Year of Delivery",
+      type: "number",
+    },
+    {
+      name: "status",
+      label: "Status",
+      type: "dropdown",
+      options: [
+        { label: "Active", value: "Active" },
+        { label: "Inactive", value: "Inactive" },
+      ],
+      required: true,
+    },
+  ];
 
-  const handleSave = () => {
-    if (!formData.name.trim() || !formData.classOfVessel || !formData.vesselType || !formData.command) {
+  // ✅ Fetch vessels
+  const fetchVessels = async () => {
+    setLoading(true);
+    try {
+      const data = await get("master/vessels/");
+      setVessels(data);
+    } catch {
       toast({
-        title: "Validation Error",
-        description: "Name, Class, Type, and Command are required fields",
+        title: "Error",
+        description: "Failed to fetch vessels",
         variant: "destructive",
       });
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const vesselData = {
-      ...formData,
-      yearOfBuild: formData.yearOfBuild ? parseInt(formData.yearOfBuild) : undefined,
-      yearOfDelivery: formData.yearOfDelivery ? parseInt(formData.yearOfDelivery) : undefined,
-    };
-
-    if (editingVessel) {
-      setVessels(prev => prev.map(vessel => 
-        vessel.id === editingVessel.id 
-          ? { ...vessel, ...vesselData }
-          : vessel
-      ));
-      toast({
-        title: "Success",
-        description: "Vessel updated successfully",
-      });
-    } else {
-      const newVessel: Vessel = {
-        id: Math.max(...vessels.map(v => v.id)) + 1,
-        ...vesselData,
-        createdBy: "Current User",
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-      setVessels(prev => [...prev, newVessel]);
-      toast({
-        title: "Success", 
-        description: "Vessel created successfully",
-      });
-    }
-
-    setIsDialogOpen(false);
-    setEditingVessel(null);
-    resetForm();
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      classOfVessel: "",
-      vesselType: "",
-      command: "",
-      dockyard: "",
-      yearOfBuild: "",
-      yearOfDelivery: "",
-      status: "Active"
-    });
+  useEffect(() => {
+    fetchVessels();
+  }, []);
+
+  // ✅ Save (Create / Update)
+  const handleSave = async (formData: any) => {
+    try {
+      if (editingVessel) {
+        const updated = await put(
+          `master/vessels/${editingVessel.id}/`,
+          formData
+        );
+        setVessels((prev) =>
+          prev.map((v) => (v.id === editingVessel.id ? updated : v))
+        );
+        toast({ title: "Success", description: "Vessel updated successfully" });
+      } else {
+        const created = await post("master/vessels/", formData);
+        setVessels((prev) => [...prev, created]);
+        toast({ title: "Success", description: "Vessel created successfully" });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to save vessel",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDialogOpen(false);
+      setEditingVessel(null);
+    }
   };
 
+  // ✅ Edit
   const handleEdit = (vessel: Vessel) => {
     setEditingVessel(vessel);
-    setFormData({
-      name: vessel.name,
-      classOfVessel: vessel.classOfVessel,
-      vesselType: vessel.vesselType,
-      command: vessel.command,
-      dockyard: vessel.dockyard,
-      yearOfBuild: vessel.yearOfBuild?.toString() || "",
-      yearOfDelivery: vessel.yearOfDelivery?.toString() || "",
-      status: vessel.status
-    });
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: number) => {
+  // ✅ Delete
+  const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this vessel?")) {
-      setVessels(prev => prev.filter(vessel => vessel.id !== id));
-      toast({
-        title: "Success",
-        description: "Vessel deleted successfully",
-      });
+      try {
+        await del(`master/vessels/${id}/`);
+        setVessels((prev) => prev.filter((v) => v.id !== id));
+        toast({ title: "Success", description: "Vessel deleted successfully" });
+      } catch {
+        toast({
+          title: "Error",
+          description: "Failed to delete vessel",
+          variant: "destructive",
+        });
+      }
     }
   };
 
+  // ✅ Search
+  const filteredVessels = vessels.filter(
+    (v) =>
+      v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.classOfVessel.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.command.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-primary">Vessel Master</h1>
-          <p className="text-muted-foreground">Manage naval vessels and their specifications</p>
+          <p className="text-muted-foreground">
+            Manage naval vessels and their specifications
+          </p>
         </div>
-        
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => {
-                setEditingVessel(null);
-                resetForm();
-              }}
+        <DynamicFormDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          title={editingVessel ? "Edit Vessel" : "Add New Vessel"}
+          description={
+            editingVessel
+              ? "Update vessel information"
+              : "Create a new vessel record"
+          }
+          fields={fields}
+          onSubmit={handleSave}
+          initialValues={editingVessel || {}}
+          trigger={
+            <Button
               className="bg-gradient-primary"
+              onClick={() => setEditingVessel(null)}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Vessel
             </Button>
-          </DialogTrigger>
-          
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Ship className="h-5 w-5" />
-                {editingVessel ? "Edit Vessel" : "Add New Vessel"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingVessel ? "Update vessel information" : "Create a new naval vessel record"}
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">Vessel Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="Enter vessel name (e.g., INS Vikrant)"
-                  required
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="classOfVessel">Class of Vessel *</Label>
-                <Select value={formData.classOfVessel} onValueChange={(value) => setFormData({...formData, classOfVessel: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select vessel class" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classOfVessels.map((cls) => (
-                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="vesselType">Vessel Type *</Label>
-                <Select value={formData.vesselType} onValueChange={(value) => setFormData({...formData, vesselType: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select vessel type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vesselTypes.map((type) => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="command">Command *</Label>
-                <Select value={formData.command} onValueChange={(value) => setFormData({...formData, command: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select command" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {commands.map((cmd) => (
-                      <SelectItem key={cmd} value={cmd}>{cmd}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="dockyard">Dockyard</Label>
-                <Select value={formData.dockyard} onValueChange={(value) => setFormData({...formData, dockyard: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select dockyard" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dockyards.map((yard) => (
-                      <SelectItem key={yard} value={yard}>{yard}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="yearOfBuild">Year of Build</Label>
-                <Input
-                  id="yearOfBuild"
-                  type="number"
-                  min="1900"
-                  max="2030"
-                  value={formData.yearOfBuild}
-                  onChange={(e) => setFormData({...formData, yearOfBuild: e.target.value})}
-                  placeholder="YYYY"
-                />
-              </div>
-              
-              <div className="col-span-2">
-                <Label htmlFor="yearOfDelivery">Year of Delivery</Label>
-                <Input
-                  id="yearOfDelivery"
-                  type="number"
-                  min="1900"
-                  max="2030"
-                  value={formData.yearOfDelivery}
-                  onChange={(e) => setFormData({...formData, yearOfDelivery: e.target.value})}
-                  placeholder="YYYY"
-                />
-              </div>
-              
-              <div className="col-span-2 flex gap-2 pt-4">
-                <Button onClick={handleSave} className="flex-1">
-                  {editingVessel ? "Update" : "Create"}
-                </Button>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+          }
+        />
       </div>
 
       {/* Search */}
@@ -320,65 +277,13 @@ const VesselMaster = () => {
         </CardContent>
       </Card>
 
-      {/* Vessels Table */}
+      {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle>Vessels ({filteredVessels.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Class</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Command</TableHead>
-                <TableHead>Dockyard</TableHead>
-                <TableHead>Year Built</TableHead>
-                <TableHead>Year Delivered</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredVessels.map((vessel) => (
-                <TableRow key={vessel.id}>
-                  <TableCell className="font-medium">{vessel.name}</TableCell>
-                  <TableCell>{vessel.classOfVessel}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{vessel.vesselType}</Badge>
-                  </TableCell>
-                  <TableCell>{vessel.command}</TableCell>
-                  <TableCell>{vessel.dockyard || "-"}</TableCell>
-                  <TableCell>{vessel.yearOfBuild || "-"}</TableCell>
-                  <TableCell>{vessel.yearOfDelivery || "-"}</TableCell>
-                  <TableCell>
-                    <Badge variant={vessel.status === "Active" ? "default" : "secondary"}>
-                      {vessel.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleEdit(vessel)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDelete(vessel.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataTable columns={columns} data={filteredVessels} rowsPerPage={5} />
         </CardContent>
       </Card>
     </div>
