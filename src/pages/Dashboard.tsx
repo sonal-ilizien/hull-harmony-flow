@@ -119,9 +119,9 @@ const Dashboard = () => {
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="pending" fill="hsl(var(--warning))" name="Pending" />
-                <Bar dataKey="approved" fill="hsl(var(--success))" name="Approved" />
-                <Bar dataKey="rejected" fill="hsl(var(--destructive))" name="Rejected" />
+                <Bar dataKey="pending" fill="#f59e0b" name="Pending" />   // amber
+<Bar dataKey="approved" fill="#22c55e" name="Approved" /> // green
+<Bar dataKey="rejected" fill="#ef4444" name="Rejected" /> // red
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
