@@ -146,6 +146,7 @@ interface DataTableProps<T> {
   rowsPerPage?: number;
   onEdit?: (row: T) => void;
   onDelete?: (row: T) => void;
+  className?: string;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -154,6 +155,7 @@ export function DataTable<T extends Record<string, any>>({
   rowsPerPage = 10,
   onEdit,
   onDelete,
+  className,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
@@ -218,23 +220,7 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div className="space-y-4">
-      {/* Toolbar with Import / Export */}
-      <div className="flex justify-end gap-2">
-        <Button
-          className="bg-[#1a2746] text-white hover:bg-[#223366]"
-          onClick={handleImport}
-        >
-          Import
-        </Button>
-        <Button
-          className="bg-green-600 text-white hover:bg-green-700"
-          onClick={handleExport}
-        >
-          Export
-        </Button>
-      </div>
-
-      <Table>
+      <Table className={className}>
         <TableHeader>
           <TableRow>
             {columns.map((col) => (

@@ -3,23 +3,23 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   Database,
   Ship,
-  ClipboardCheck,
   BarChart3,
   FileText,
   ChevronDown,
-  Anchor,
-  Settings,
-  Users,
   Building2,
-  Calendar,
-  Search,
-  PenTool
+  PenTool,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import hullInsightLogo from "@/assets/hull-insight-logo.png";
 
+// Sidebar items (supports nested menus)
 const sidebarItems = [
   {
     title: "Dashboards",
@@ -55,41 +55,38 @@ const sidebarItems = [
     ]
   },
   {
-    title: "Dockyard Plan Approval",
+    title: "Yard Operations",
+    icon: Building2,
+    items: [
+      { title: "Dashboard", path: "/yard/dashboard" },
+      {
+        title: "Transactions",
+        icon: Building2,
+        items: [
+          { title: "Docking Plan", path: "/yard/docking" }
+        ]
+      },
+      { title: "Reports", path: "/yard/reports" }
+    ]
+  },
+  {
+    title: "Ship Operations",
     icon: Ship,
     items: [
-      { title: "Plan Initiation", path: "/dockyard/initiate" },
-      { title: "Calendar View", path: "/dockyard/calendar" },
-      { title: "Approval Workflow", path: "/dockyard/approval" },
-      { title: "Status Tracking", path: "/dockyard/status" }
+      { title: "Dashboard", path: "/ship/dashboard" },
+      {
+        title: "Transactions",
+        icon: Building2,
+        items: [
+          { title: "Quarterly Hull Survey", path: "/ship/survey" },
+          { title: "HVAC Trial", path: "/ship/hvac" }
+        ]
+      },
+      { title: "Reports", path: "/ship/reports" }
     ]
   },
-  {
-    title: "Quarterly Hull Survey",
-    icon: ClipboardCheck,
-    items: [
-      { title: "Survey Management", path: "/survey/manage" },
-      { title: "Inspection Records", path: "/survey/inspect" },
-      { title: "Corrective Actions", path: "/survey/actions" },
-      { title: "Compliance Status", path: "/survey/compliance" }
-    ]
-  },
-  
-  {
-    title: "Reports",
-    icon: FileText,
-    items: [
-      { title: "Docking Reports", path: "/reports/docking" },
-      { title: "Survey Reports", path: "/reports/survey" },
-      { title: "Compliance Reports", path: "/reports/compliance" },
-      { title: "Action Tracker", path: "/reports/actions" }
-    ]
-  },
-  {
-    title: "Interactive Drawing",
-    icon: PenTool,
-    path: "/drawing"
-  },
+ 
+  { title: "Interactive Drawing", icon: PenTool, path: "/drawing" }
 ];
 
 interface SidebarProps {
@@ -101,129 +98,114 @@ const Sidebar = ({ collapsed }: SidebarProps) => {
   const location = useLocation();
 
   const toggleExpanded = (title: string) => {
-    setExpandedItems(prev =>
-      prev.includes(title)
-        ? prev.filter(item => item !== title)
-        : [...prev, title]
+    setExpandedItems((prev) =>
+      prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]
     );
   };
 
   const isActive = (path: string) => location.pathname === path;
 
-  return (
-    <div
-  className={cn(
-    "bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-500 shadow-naval",
-    collapsed ? "w-16" : "w-64"
-  )}
->
-  {/* Header */}
-  <div className="p-4 border-b border-sidebar-border flex items-center gap-3 bg-gradient-header">
-    <img
-      src={hullInsightLogo}
-      alt="Hull Insight"
-      className="w-12 h-12 transition-transform duration-300 hover:scale-110"
-    />
-    {!collapsed && (
-      <div>
-        <h2
-          className="font-bold text-lg bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-700 bg-[length:200%_200%] bg-clip-text text-transparent animate-gradient-move"
-        >
-          Hull Insight
-        </h2>
-        <p className="text-xs bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-700 bg-[length:200%_200%] bg-clip-text text-transparent animate-gradient-move">Naval Operations</p>
-      </div>
-    )}
-  </div>
-
-  {/* Navigation */}
-  <nav className="p-2 space-y-1">
-    {sidebarItems.map((item) => (
-      <div key={item.title}>
-        {item.path ? (
-          // Simple nav item
-          <NavLink to={item.path}>
+  // 🔑 Recursive rendering for nested menus
+  const renderMenuItems = (items: any[], level = 0) =>
+    items.map((item) => {
+      if (item.path) {
+        // Simple nav item
+        return (
+          <NavLink key={item.path} to={item.path}>
             <Button
               variant="ghost"
+              size={collapsed ? "icon" : "sm"}
               className={cn(
-                "w-full justify-start rounded-lg transition-all duration-300 group relative overflow-hidden",
+                "w-full justify-start rounded-md transition-all duration-200 relative z-10",
                 isActive(item.path)
-                  ? "bg-sidebar-accent text-sidebar-foreground font-semibold shadow-card"
-                  : "hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
+                  ? "bg-sidebar-accent text-sidebar-foreground font-semibold"
+                  : "hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
+                level > 0 && "ml-4" // indent nested levels
               )}
-              size={collapsed ? "icon" : "default"}
+            >
+              {item.icon && !collapsed && (
+                <item.icon className="h-4 w-4 mr-2 shrink-0" />
+              )}
+              {!collapsed && <span className="truncate">{item.title}</span>}
+            </Button>
+          </NavLink>
+        );
+      }
+
+      // Collapsible nav item
+      return (
+        <Collapsible
+          key={item.title}
+          open={expandedItems.includes(item.title)}
+          onOpenChange={() => toggleExpanded(item.title)}
+        >
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size={collapsed ? "icon" : "sm"}
+              className={cn(
+                "w-full justify-start rounded-lg transition-all duration-300 group relative z-10",
+                "hover:bg-sidebar-primary hover:text-sidebar-primary-foreground",
+                level > 0 && "ml-4"
+              )}
             >
               <item.icon
                 className={cn(
-                  "h-5 w-5 transition-transform duration-300 group-hover:scale-110",
+                  "h-5 w-5 transition-transform duration-300 group-hover:rotate-6",
                   !collapsed && "mr-2"
                 )}
               />
-              {!collapsed && <span>{item.title}</span>}
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left">{item.title}</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform duration-300",
+                      expandedItems.includes(item.title) && "rotate-180"
+                    )}
+                  />
+                </>
+              )}
             </Button>
-          </NavLink>
-        ) : (
-          // Collapsible nav item
-          <Collapsible
-            open={expandedItems.includes(item.title)}
-            onOpenChange={() => toggleExpanded(item.title)}
-          >
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start rounded-lg transition-all duration-300 group",
-                  "hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
-                )}
-                size={collapsed ? "icon" : "default"}
-              >
-                <item.icon
-                  className={cn(
-                    "h-5 w-5 transition-transform duration-300 group-hover:rotate-6",
-                    !collapsed && "mr-2"
-                  )}
-                />
-                {!collapsed && (
-                  <>
-                    <span className="flex-1 text-left">{item.title}</span>
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform duration-300",
-                        expandedItems.includes(item.title) && "rotate-180"
-                      )}
-                    />
-                  </>
-                )}
-              </Button>
-            </CollapsibleTrigger>
+          </CollapsibleTrigger>
 
-            {!collapsed && (
-              <CollapsibleContent className="ml-6 space-y-1 overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
-                {item.items?.map((subItem) => (
-                  <NavLink key={subItem.path} to={subItem.path}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "w-full justify-start rounded-md transition-all duration-200",
-                        isActive(subItem.path)
-                          ? "bg-sidebar-accent text-sidebar-foreground font-semibold"
-                          : "hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
-                      )}
-                    >
-                      {subItem.title}
-                    </Button>
-                  </NavLink>
-                ))}
-              </CollapsibleContent>
-            )}
-          </Collapsible>
+          {!collapsed && (
+            <CollapsibleContent className="space-y-1 data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+              {renderMenuItems(item.items || [], level + 1)}
+            </CollapsibleContent>
+          )}
+        </Collapsible>
+      );
+    });
+
+  return (
+    <div
+      className={cn(
+        "bg-sidebar text-sidebar-foreground border-r border-sidebar-border transition-all duration-500 shadow-naval",
+        collapsed ? "w-16" : "w-64",
+        "relative overflow-x-hidden overflow-y-auto h-screen" // ✅ fix scroll + highlight clipping
+      )}
+    >
+      {/* Header */}
+      <div className="p-4 border-b border-sidebar-border flex items-center gap-3 bg-gradient-header sticky top-0 z-20">
+        <img
+          src={hullInsightLogo}
+          alt="Hull Insight"
+          className="w-8 h-8 transition-transform duration-300 hover:scale-110"
+        />
+        {!collapsed && (
+          <div>
+            <h2 className="font-bold text-lg text-sidebar-primary">Hull Insight</h2>
+            <p className="text-xs text-muted-foreground">Naval Operations</p>
+          </div>
         )}
       </div>
-    ))}
-  </nav>
-</div>
 
+      {/* Navigation */}
+      <nav className="p-2 space-y-1 relative z-0">
+        {renderMenuItems(sidebarItems)}
+      </nav>
+    </div>
   );
 };
 

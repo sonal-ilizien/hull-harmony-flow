@@ -32,6 +32,8 @@ interface Shape {
   }
 }
 
+const LOCAL_STORAGE_KEY = 'drawing-app-state';
+
 export default function Drawing() {
   const [shapes, setShapes] = useState<Shape[]>([])
   const [selectedShape, setSelectedShape] = useState<number | null>(null)
@@ -54,6 +56,33 @@ export default function Drawing() {
   const [startPoint, setStartPoint] = useState({ x: 0, y: 0 })
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const [resizeHandle, setResizeHandle] = useState<string | null>(null)
+
+  // 🔄 Load shapes and background image from localStorage on initial render
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (savedState) {
+        const { shapes: savedShapes, backgroundImage: savedImage } = JSON.parse(savedState);
+        if (savedShapes) setShapes(savedShapes);
+        if (savedImage) setBackgroundImage(savedImage);
+      }
+    } catch (error) {
+      console.error("Failed to load state from localStorage", error);
+    }
+  }, []);
+
+  // 💾 Save shapes and background image to localStorage whenever they change
+  useEffect(() => {
+    try {
+      const stateToSave = {
+        shapes,
+        backgroundImage,
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error("Failed to save state to localStorage", error);
+    }
+  }, [shapes, backgroundImage]);
 
   // Function to get mouse position relative to SVG
   const getSVGPoint = (e: React.MouseEvent) => {
@@ -399,7 +428,7 @@ export default function Drawing() {
                 id="shape-select"
                 value={currentTool || ""}
                 onChange={(e) => setCurrentTool(e.target.value as ShapeType | "hand" | null)}
-                className="border rounded w-full p-2 rounded-lg shadow-sm"
+                className="border rounded w-full p-2 shadow-sm"
             >
                 <option value="rect">Rectangle</option>
                 <option value="circle">Circle</option>
@@ -619,7 +648,7 @@ export default function Drawing() {
             <div>
               <Label>Severity</Label>
               <select
-                className="border rounded w-full p-2 rounded-lg shadow-sm"
+                className="border rounded w-full p-2 shadow-sm"
                 value={shapeMetadata?.severity || "Low"}
                 onChange={(e) =>
                   setShapeMetadata((prev) => ({

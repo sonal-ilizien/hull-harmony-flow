@@ -25,6 +25,9 @@ import UserMaster from "@/pages/masters/UserMaster";
 import RootConfigMaster from "@/pages/masters/RootConfigMaster";
 import RoleMaster from "@/pages/masters/RoleMaster";
 
+// Module imports
+import YardModule from "./pages/yard/YardModule";
+import ShipModule from "./pages/ship/ShipModule";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -55,9 +58,13 @@ const App = () => (
           <Route path="/masters/role" element={<RoleMaster />} />
           {/* Placeholder routes for other masters */}
           <Route path="masters/*" element={<div className="p-8 text-center text-muted-foreground">Master page coming soon...</div>} />
-          <Route path="dockyard/*" element={<div className="p-8 text-center text-muted-foreground">Dockyard module coming soon...</div>} />
-          <Route path="survey/*" element={<div className="p-8 text-center text-muted-foreground">Survey module coming soon...</div>} />
-          <Route path="reports/*" element={<div className="p-8 text-center text-muted-foreground">Reports module coming soon...</div>} />
+          
+          {/* Yard Operations Module */}
+          <Route path="yard/*" element={<YardModule />} />
+          
+          {/* Ship Operations Module */}
+          <Route path="ship/*" element={<ShipModule />} />
+          
           <Route
             path="/drawing"
             element={
@@ -72,5 +79,6 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+
 
 export default App;
