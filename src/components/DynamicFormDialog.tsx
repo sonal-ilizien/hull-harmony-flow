@@ -106,98 +106,97 @@ export function DynamicFormDialog({
       {/* ✅ If trigger is passed, wrap it in DialogTrigger */}
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
 
-      <DialogContent className="sm:max-w-lg rounded-2xl shadow-xl border-0 bg-white">
-  {/* Header with gradient */}
-  <DialogHeader className="bg-gradient-to-r from-indigo-500 to-sky-500 p-4 rounded-t-2xl text-white">
-    <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
-    {description && (
-      <DialogDescription className="text-sm opacity-90 text-white">
-        {description}
-      </DialogDescription>
-    )}
-  </DialogHeader>
+      <DialogContent className="lg:max-w-lg shadow-xl border-0 bg-white p-0 rounded-1xl">
+        {/* Header with navy blue gradient */}
+        <DialogHeader className="bg-gradient-to-r from-[#1a2746] to-[#223366] p-4 text-white">
+          <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
+          {description && (
+            <DialogDescription className="text-sm opacity-90 text-white">
+              {description}
+            </DialogDescription>
+          )}
+        </DialogHeader>
 
-  {/* Form Body */}
-  <div className="space-y-4 max-h-[60vh] overflow-y-auto p-4 custom-scrollbar">
-    {fields.map((field) => (
-      <div key={field.name} className="space-y-2">
-        <Label
-          htmlFor={field.name}
-          className="font-medium text-gray-700"
-        >
-          {field.label} {field.required && "*"}
-        </Label>
+        {/* Form Body */}
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto p-4 custom-scrollbar">
+          {fields.map((field) => (
+            <div key={field.name} className="space-y-2">
+              <Label
+                htmlFor={field.name}
+                className="font-medium text-gray-700"
+              >
+                {field.label} {field.required && "*"}
+              </Label>
 
-        {/* Inputs */}
-        {(field.type === "text" ||
-          field.type === "number" ||
-          field.type === "date") && (
-          <Input
-            id={field.name}
-            type={field.type}
-            placeholder={field.placeholder}
-            value={formData[field.name] || ""}
-            required={field.required}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200"
-          />
-        )}
+              {/* Inputs */}
+              {(field.type === "text" ||
+                field.type === "number" ||
+                field.type === "date") && (
+                <Input
+                  id={field.name}
+                  type={field.type}
+                  placeholder={field.placeholder}
+                  value={formData[field.name] || ""}
+                  required={field.required}
+                  onChange={(e) => handleChange(field.name, e.target.value)}
+                  className="rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200"
+                />
+              )}
 
-        {field.type === "textarea" && (
-          <textarea
-            id={field.name}
-            placeholder={field.placeholder}
-            value={formData[field.name] || ""}
-            required={field.required}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 p-2"
-          />
-        )}
+              {field.type === "textarea" && (
+                <textarea
+                  id={field.name}
+                  placeholder={field.placeholder}
+                  value={formData[field.name] || ""}
+                  required={field.required}
+                  onChange={(e) => handleChange(field.name, e.target.value)}
+                  className="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 p-2"
+                />
+              )}
 
-        {field.type === "dropdown" && (
-          <select
-            id={field.name}
-            value={formData[field.name] || ""}
-            required={field.required}
-            onChange={(e) => handleChange(field.name, e.target.value)}
-            className="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 p-2"
-          >
-            <option value="">Select {field.label}</option>
-            {(field.options || dropdownData[field.name] || []).map(
-              (opt: any, idx) => (
-                <option
-                  key={idx}
-                  value={opt.value || opt.id || opt.code}
+              {field.type === "dropdown" && (
+                <select
+                  id={field.name}
+                  value={formData[field.name] || ""}
+                  required={field.required}
+                  onChange={(e) => handleChange(field.name, e.target.value)}
+                  className="w-full rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 p-2"
                 >
-                  {opt.label || opt.name}
-                </option>
-              )
-            )}
-          </select>
-        )}
-      </div>
-    ))}
-  </div>
+                  <option value="">Select {field.label}</option>
+                  {(field.options || dropdownData[field.name] || []).map(
+                    (opt: any, idx) => (
+                      <option
+                        key={idx}
+                        value={opt.value || opt.id || opt.code}
+                      >
+                        {opt.label || opt.name}
+                      </option>
+                    )
+                  )}
+                </select>
+              )}
+            </div>
+          ))}
+        </div>
 
-  {/* Footer */}
-  <DialogFooter className="flex justify-end gap-3 p-4 border-t">
-    <Button
-      variant="outline"
-      onClick={() => onOpenChange(false)}
-      className="rounded-lg"
-    >
-      Cancel
-    </Button>
-    <Button
-      onClick={handleSubmit}
-      disabled={loading}
-      className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
-    >
-      {loading ? "Saving..." : "Save"}
-    </Button>
-  </DialogFooter>
-</DialogContent>
-
+        {/* Footer */}
+        <DialogFooter className="flex justify-end gap-3 p-4 border-t">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="rounded-lg"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+          >
+            {loading ? "Saving..." : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
   );
 }

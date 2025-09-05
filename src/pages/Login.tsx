@@ -62,7 +62,7 @@ const Login = () => {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
       >
-        <Card className="w-11/12 max-w-xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl relative overflow-hidden">
+        <Card className="w-11/12 max-w-xl min-w-[400px] bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl relative overflow-hidden">
           <CardHeader className="text-center space-y-4">
             {/* Animated Logo */}
             <motion.div

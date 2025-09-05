@@ -1,47 +1,47 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Edit, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import { DataTable, Column } from "@/components/ui/table";
+import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { DynamicFormDialog } from "@/components/DynamicFormDialog";
 import { get, post, put, del } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { set } from "date-fns";
 
-interface Command {
+interface User {
   id: number;
-  name: string;
-  code: string;
+  username: string;
+  email: string;
+  role: string;
   active: number; // 1 = Active, 2 = Inactive
-  created_on: string;
 }
 
-const CommandMaster = () => {
+const UserMaster = () => {
   const { toast } = useToast();
-  const [commands, setCommands] = useState<Command[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCommand, setEditingCommand] = useState<Command | null>(null);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Table columns
-  const columns: Column<Command>[] = [
-    { header: "Name", accessor: "name" },
-    { header: "Code", accessor: "code" },
+  const columns: Column<User>[] = [
+    { header: "Username", accessor: "loginname" },
+    { header: "Email", accessor: "email" },
+    { header: "Role", accessor: "role_name" }, // or "role"
     {
       header: "Status",
-      accessor: "active",
+      accessor: "status",
       render: (row) => (
-        <Badge variant={row.active === 1 ? "default" : "secondary"}>
-          {row.active === 1 ? "Active" : "Inactive"}
+        <Badge variant={row.status === 1 ? "default" : "secondary"}>
+          {row.status === 1 ? "Active" : "Inactive"}
         </Badge>
       ),
     },
-    { header: "Created Date", accessor: "created_on" },
     {
       header: "Actions",
       accessor: "actions",
@@ -66,89 +66,87 @@ const CommandMaster = () => {
     },
   ];
 
-  // Fetch commands from API
-  const fetchCommands = async (pageNum: number = 1) => {
+  // Fetch users from API
+  const fetchUsers = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/commands/?page=${pageNum}`);
-      setCommands(res.results || []);
+      const res = await get(`/api/auth/users/?page=${pageNum}`);
+      setUsers(Array.isArray(res.results.data) ? res.results : []);
+
+      console.log(      setUsers(Array.isArray(res.results.data) ? res.results : []));
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {
-      console.error("Failed to fetch commands", err);
       toast({
         title: "Error",
-        description: "Failed to fetch commands",
+        description: "Failed to fetch users",
         variant: "destructive",
       });
     }
   };
 
   useEffect(() => {
-    fetchCommands(page);
+    fetchUsers(page);
   }, [page]);
 
   // Save / Update API
   const handleSave = async (formData: any) => {
-    if (!formData.name?.trim()) {
+    if (!formData.username?.trim()) {
       toast({
         title: "Validation Error",
-        description: "Command name is required",
+        description: "Username is required",
         variant: "destructive",
       });
       return;
     }
 
     const payload = {
-      name: formData.name,
-      code: formData.code,
+      username: formData.username,
+      email: formData.email,
+      role: formData.role,
       active: formData.status === "Active" ? 1 : 2,
     };
 
     try {
-      if (editingCommand) {
-        const payloadWithId = { ...payload, id: editingCommand.id };
-        // UPDATE
-        await put(`/master/commands/`, payloadWithId);
-        toast({ title: "Success", description: "Command updated successfully" });
+      if (editingUser) {
+        const payloadWithId = { ...payload, id: editingUser.id };
+        await put(`/api/auth/users/`, payloadWithId);
+        toast({ title: "Success", description: "User updated successfully" });
       } else {
-        // CREATE
-        await post(`/master/commands/`, payload);
-        toast({ title: "Success", description: "Command created successfully" });
+        await post(`/api/auth/users/`, payload);
+        toast({ title: "Success", description: "User created successfully" });
       }
 
-      fetchCommands(page); // refresh table
+      fetchUsers(page);
       setIsDialogOpen(false);
-      setEditingCommand(null);
+      setEditingUser(null);
     } catch (err) {
-      console.error("Failed to save command", err);
       toast({
         title: "Error",
-        description: "Failed to save command",
+        description: "Failed to save user",
         variant: "destructive",
       });
     }
   };
 
-  const handleEdit = (command: Command) => {
-    setEditingCommand(command);
+  const handleEdit = (user: User) => {
+    setEditingUser(user);
     setIsDialogOpen(true);
   };
 
   // Delete API
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this command?")) {
+    if (confirm("Are you sure you want to delete this user?")) {
       try {
         const payload = { id: id, delete: true };
-        await del(`/master/commands/`, payload);
-        setCommands((prev) => prev.filter((c) => c.id !== id));
+        await del(`/api/auth/users/`, payload);
+        setUsers((prev) => prev.filter((user) => user.id !== id));
         toast({
           title: "Success",
-          description: "Command deleted successfully",
+          description: "User deleted successfully",
         });
       } catch (err) {
-        console.error("Delete failed", err);
         toast({
           title: "Error",
-          description: "Failed to delete command",
+          description: "Failed to delete user",
           variant: "destructive",
         });
       }
@@ -156,30 +154,32 @@ const CommandMaster = () => {
   };
 
   // Filter by search
-  const filteredCommands = commands.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = Array.isArray(users)
+    ? users.filter((user) =>
+        user.username.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : [];
 
   return (
     <div className="space-y-6">
       {/* Header + Add Button */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Command Master</h1>
+          <h1 className="text-3xl font-bold text-primary">User Master</h1>
           <p className="text-muted-foreground">
-            Manage naval commands and their headquarters
+            Manage users and roles
           </p>
         </div>
 
         <DynamicFormDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
-          title={editingCommand ? "Edit Command" : "Add Command"}
+          title={editingUser ? "Edit User" : "Add User"}
           description="Fill out the details below"
           fields={[
-            { name: "name", label: "Command Name", type: "text", required: true },
-            { name: "code", label: "Command Code", type: "text" },
+            { name: "username", label: "Username", type: "text", required: true },
+            { name: "email", label: "Email", type: "text" },
+            { name: "role", label: "Role", type: "text" },
             {
               name: "status",
               label: "Active",
@@ -189,23 +189,24 @@ const CommandMaster = () => {
           ]}
           onSubmit={handleSave}
           initialValues={
-            editingCommand
+            editingUser
               ? {
-                  name: editingCommand.name,
-                  code: editingCommand.code,
-                  status: editingCommand.active === 1 ? "Active" : "Inactive",
+                  username: editingUser.username,
+                  email: editingUser.email,
+                  role: editingUser.role,
+                  status: editingUser.active === 1 ? "Active" : "Inactive",
                 }
               : {}
           }
           trigger={
             <Button
               onClick={() => {
-                setEditingCommand(null);
+                setEditingUser(null);
                 setIsDialogOpen(true);
               }}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Command
+              Add User
             </Button>
           }
         />
@@ -217,7 +218,7 @@ const CommandMaster = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search commands..."
+              placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -226,13 +227,13 @@ const CommandMaster = () => {
         </CardContent>
       </Card>
 
-      {/* Commands Table */}
+      {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Commands</CardTitle>
+          <CardTitle>Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={filteredCommands} rowsPerPage={10} />
+          <DataTable columns={columns} data={filteredUsers} rowsPerPage={10} />
         </CardContent>
       </Card>
 
@@ -260,4 +261,4 @@ const CommandMaster = () => {
   );
 };
 
-export default CommandMaster;
+export default UserMaster;

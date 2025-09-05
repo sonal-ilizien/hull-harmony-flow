@@ -108,5 +108,24 @@ All colors MUST be HSL for consistency across light/dark modes.
 
   body {
     @apply bg-background text-foreground;
+    overflow-y: hidden;
   }
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+.animate-gradient-move {
+  animation: gradient-move 3s linear infinite alternate;
+}
+
+/* Add this to your global CSS if needed */
+[data-state="open"] .dialog-close, /* or the actual selector for your close button */
+[data-state="open"] .DialogClose {
+  color: #fff !important;
 }

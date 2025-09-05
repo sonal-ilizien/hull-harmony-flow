@@ -13,6 +13,17 @@ import VesselMaster from "./pages/masters/VesselMaster";
 import DockyardMaster from "./pages/masters/DockyardMaster";
 import NotFound from "./pages/NotFound";
 import Drawing from "./pages/Drawing";
+import EquipmentMaster from "@/pages/masters/EquipmentMaster";
+import DamageTypeMaster from "@/pages/masters/DamageTypeMaster";
+import SeverityMaster from "@/pages/masters/SeverityMaster";
+import OperationalStatusMaster from "@/pages/masters/OperationalStatusMaster";
+import SubmoduleMaster from "@/pages/masters/SubmoduleMaster";
+import ModuleMaster from "@/pages/masters/ModuleMaster"; // <-- Add this import
+import CompartmentMaster from "@/pages/masters/CompartmentMaster";
+import SystemMaster from "@/pages/masters/SystemMaster"; // <-- Create this file similarly
+import UserMaster from "@/pages/masters/UserMaster";
+import RootConfigMaster from "@/pages/masters/RootConfigMaster";
+import RoleMaster from "@/pages/masters/RoleMaster";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +42,17 @@ const App = () => (
           <Route path="masters/command" element={<CommandMaster />} />
           <Route path="masters/vessel" element={<VesselMaster />} />
           <Route path="masters/dockyard" element={<DockyardMaster />} />
+          <Route path="/masters/equipment" element={<EquipmentMaster />} />
+          <Route path="/masters/module" element={<ModuleMaster />} /> {/* <-- Add this line */}
+          <Route path="/masters/submodule" element={<SubmoduleMaster />} />
+          <Route path="/masters/damagetype" element={<DamageTypeMaster />} />
+          <Route path="/masters/severity" element={<SeverityMaster />} />
+          <Route path="/masters/operationalstatus" element={<OperationalStatusMaster />} />
+          <Route path="/masters/compartment" element={<CompartmentMaster />} />
+          <Route path="/masters/system" element={<SystemMaster />} />
+          <Route path="/masters/user" element={<UserMaster />} />
+          <Route path="/masters/rootconfig" element={<RootConfigMaster />} />
+          <Route path="/masters/role" element={<RoleMaster />} />
           {/* Placeholder routes for other masters */}
           <Route path="masters/*" element={<div className="p-8 text-center text-muted-foreground">Master page coming soon...</div>} />
           <Route path="dockyard/*" element={<div className="p-8 text-center text-muted-foreground">Dockyard module coming soon...</div>} />

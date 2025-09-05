@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Edit, Trash2, Ship } from "lucide-react";
+import { Search, Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DataTable, Column } from "@/components/ui/table";
 import { DynamicFormDialog, FieldConfig } from "@/components/DynamicFormDialog";
@@ -12,44 +12,61 @@ import { get, post, put, del } from "@/lib/api";
 interface Vessel {
   id: number;
   name: string;
-  classOfVessel: string;
-  vesselType: string;
-  command: string;
-  dockyard: string;
-  yearOfBuild?: number;
-  yearOfDelivery?: number;
-  status: string;
-  createdBy: string;
-  createdAt: string;
+  code: string;
+  classofvessel: { id: number; name: string } | null;
+  vesseltype: { id: number; name: string } | null;
+  yard: { id: number; name: string } | null;
+  command: { id: number; name: string } | null;
+  year_of_build?: number;
+  year_of_delivery?: number;
+  active: number;
+  created_on: string;
+  created_by: number;
 }
 
 const VesselMaster = () => {
   const { toast } = useToast();
   const [vessels, setVessels] = useState<Vessel[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVessel, setEditingVessel] = useState<Vessel | null>(null);
 
-  // ✅ Table columns
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Table columns
   const columns: Column<Vessel>[] = [
     { header: "Name", accessor: "name" },
-    { header: "Class", accessor: "classOfVessel" },
+    { header: "Code", accessor: "code" },
+    {
+      header: "Class",
+      accessor: "classofvessel",
+      render: (row) => row.classofvessel?.name || "-",
+    },
     {
       header: "Type",
-      accessor: "vesselType",
-      render: (row) => <Badge variant="outline">{row.vesselType}</Badge>,
+      accessor: "vesseltype",
+      render: (row) => row.vesseltype?.name || "-",
     },
-    { header: "Command", accessor: "command" },
-    { header: "Dockyard", accessor: "dockyard" },
-    { header: "Year Built", accessor: "yearOfBuild" },
-    { header: "Year Delivered", accessor: "yearOfDelivery" },
+    {
+      header: "Command",
+      accessor: "command",
+      render: (row) => row.command?.name || "-",
+    },
+    {
+      header: "Dockyard",
+      accessor: "yard",
+      render: (row) => row.yard?.name || "-",
+    },
+    { header: "Year Built", accessor: "year_of_build" },
+    { header: "Year Delivered", accessor: "year_of_delivery" },
     {
       header: "Status",
-      accessor: "status",
+      accessor: "active",
       render: (row) => (
-        <Badge variant={row.status === "Active" ? "default" : "secondary"}>
-          {row.status}
+        <Badge variant={row.active === 1 ? "default" : "secondary"}>
+          {row.active === 1 ? "Active" : "Inactive"}
         </Badge>
       ),
     },
@@ -57,7 +74,7 @@ const VesselMaster = () => {
       header: "Actions",
       accessor: "actions",
       render: (row) => (
-        <div className="flex justify-end gap-2">
+        <div className="flex gap-2">
           <Button variant="outline" size="icon" onClick={() => handleEdit(row)}>
             <Edit className="h-4 w-4" />
           </Button>
@@ -73,144 +90,121 @@ const VesselMaster = () => {
     },
   ];
 
-  // ✅ Form fields (dropdowns will later come from APIs instead of static arrays)
+  // Form fields
   const fields: FieldConfig[] = [
     { name: "name", label: "Vessel Name", type: "text", required: true },
+    { name: "code", label: "Vessel Code", type: "text" },
     {
-      name: "classOfVessel",
+      name: "classofvessel",
       label: "Class of Vessel",
       type: "dropdown",
-      options: [
-        { label: "Vikrant Class", value: "Vikrant Class" },
-        { label: "Kolkata Class", value: "Kolkata Class" },
-        { label: "Delhi Class", value: "Delhi Class" },
-        { label: "Rajput Class", value: "Rajput Class" },
-        { label: "Shivalik Class", value: "Shivalik Class" },
-      ],
+      options: [], // TODO: Populate dynamically if needed
       required: true,
     },
     {
-      name: "vesselType",
+      name: "vesseltype",
       label: "Vessel Type",
       type: "dropdown",
-      options: [
-        { label: "Aircraft Carrier", value: "Aircraft Carrier" },
-        { label: "Destroyer", value: "Destroyer" },
-        { label: "Frigate", value: "Frigate" },
-        { label: "Corvette", value: "Corvette" },
-        { label: "Submarine", value: "Submarine" },
-        { label: "Support Vessel", value: "Support Vessel" },
-      ],
+      options: [],
       required: true,
     },
     {
       name: "command",
       label: "Command",
       type: "dropdown",
-      options: [
-        { label: "Eastern Naval Command", value: "Eastern Naval Command" },
-        { label: "Western Naval Command", value: "Western Naval Command" },
-        { label: "Southern Naval Command", value: "Southern Naval Command" },
-      ],
+      options: [],
       required: true,
     },
     {
-      name: "dockyard",
+      name: "yard",
       label: "Dockyard",
       type: "dropdown",
-      options: [
-        { label: "Cochin Shipyard", value: "Cochin Shipyard" },
-        { label: "Mazagon Dock", value: "Mazagon Dock" },
-        { label: "Garden Reach Shipyard", value: "Garden Reach Shipyard" },
-        { label: "Goa Shipyard", value: "Goa Shipyard" },
-      ],
+      options: [],
     },
     {
-      name: "yearOfBuild",
+      name: "year_of_build",
       label: "Year of Build",
       type: "number",
     },
     {
-      name: "yearOfDelivery",
+      name: "year_of_delivery",
       label: "Year of Delivery",
       type: "number",
     },
     {
-      name: "status",
+      name: "active",
       label: "Status",
       type: "dropdown",
       options: [
-        { label: "Active", value: "Active" },
-        { label: "Inactive", value: "Inactive" },
+        { label: "Active", value: "1" },
+        { label: "Inactive", value: "0" },
       ],
       required: true,
     },
   ];
 
-  // ✅ Fetch vessels
-  const fetchVessels = async () => {
-    setLoading(true);
+  // Fetch vessels with pagination
+  const fetchVessels = async (pageNum: number = 1) => {
     try {
-      const data = await get("master/vessels/");
-      setVessels(data);
-    } catch {
+      const res = await get(`/master/vessels/?page=${pageNum}`);
+      setVessels(res.results || []);
+      setTotalPages(Math.ceil((res.count || 0) / 10));
+    } catch (err) {
       toast({
         title: "Error",
         description: "Failed to fetch vessels",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchVessels();
-  }, []);
+    fetchVessels(page);
+  }, [page]);
 
-  // ✅ Save (Create / Update)
+  // Save / Update
   const handleSave = async (formData: any) => {
+    const payload = {
+      ...formData,
+      active: formData.active === "1" || formData.active === 1 ? 1 : 0,
+    };
     try {
       if (editingVessel) {
-        const updated = await put(
-          `master/vessels/${editingVessel.id}/`,
-          formData
-        );
-        setVessels((prev) =>
-          prev.map((v) => (v.id === editingVessel.id ? updated : v))
-        );
+        await put(`/master/vessels/${editingVessel.id}/`, payload);
         toast({ title: "Success", description: "Vessel updated successfully" });
       } else {
-        const created = await post("master/vessels/", formData);
-        setVessels((prev) => [...prev, created]);
+        await post(`/master/vessels/`, payload);
         toast({ title: "Success", description: "Vessel created successfully" });
       }
-    } catch {
+      fetchVessels(page);
+      setIsDialogOpen(false);
+      setEditingVessel(null);
+    } catch (err) {
       toast({
         title: "Error",
         description: "Failed to save vessel",
         variant: "destructive",
       });
-    } finally {
-      setIsDialogOpen(false);
-      setEditingVessel(null);
     }
   };
 
-  // ✅ Edit
   const handleEdit = (vessel: Vessel) => {
     setEditingVessel(vessel);
     setIsDialogOpen(true);
   };
 
-  // ✅ Delete
+  // Delete
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this vessel?")) {
       try {
-        await del(`master/vessels/${id}/`);
+        await del(`/master/vessels/${id}/`);
         setVessels((prev) => prev.filter((v) => v.id !== id));
-        toast({ title: "Success", description: "Vessel deleted successfully" });
-      } catch {
+        toast({
+          title: "Success",
+          description: "Vessel deleted successfully",
+        });
+        fetchVessels(page);
+      } catch (err) {
         toast({
           title: "Error",
           description: "Failed to delete vessel",
@@ -220,17 +214,17 @@ const VesselMaster = () => {
     }
   };
 
-  // ✅ Search
+  // Search
   const filteredVessels = vessels.filter(
     (v) =>
       v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.classOfVessel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      v.command.toLowerCase().includes(searchTerm.toLowerCase())
+      v.classofvessel?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      v.command?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header + Add Button */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-primary">Vessel Master</h1>
@@ -241,21 +235,26 @@ const VesselMaster = () => {
         <DynamicFormDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
-          title={editingVessel ? "Edit Vessel" : "Add New Vessel"}
-          description={
-            editingVessel
-              ? "Update vessel information"
-              : "Create a new vessel record"
-          }
+          title={editingVessel ? "Edit Vessel" : "Add Vessel"}
+          description="Fill out the details below"
           fields={fields}
           onSubmit={handleSave}
-          initialValues={editingVessel || {}}
+          initialValues={
+            editingVessel
+              ? {
+                  ...editingVessel,
+                  active: editingVessel.active === 1 ? "1" : "0",
+                }
+              : {}
+          }
           trigger={
             <Button
-              className="bg-gradient-primary"
-              onClick={() => setEditingVessel(null)}
+              onClick={() => {
+                setEditingVessel(null);
+                setIsDialogOpen(true);
+              }}
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="mr-2 h-4 w-4" />
               Add Vessel
             </Button>
           }
@@ -280,12 +279,33 @@ const VesselMaster = () => {
       {/* Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Vessels ({filteredVessels.length})</CardTitle>
+          <CardTitle>Vessels</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={filteredVessels} rowsPerPage={5} />
+          <DataTable columns={columns} data={filteredVessels} rowsPerPage={10} />
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      <div className="flex justify-center gap-2 mt-4">
+        <Button
+          variant="outline"
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+        >
+          Previous
+        </Button>
+        <span className="text-sm">
+          Page {page} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          disabled={page === totalPages}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 };

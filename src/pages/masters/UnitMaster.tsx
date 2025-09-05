@@ -8,76 +8,78 @@ import { useToast } from "@/hooks/use-toast";
 import { DynamicFormDialog } from "@/components/DynamicFormDialog";
 import { get, post, put, del } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"; // Add this import
 
 interface Unit {
   id: number;
   name: string;
   code?: string;
-  description?: string;
-  active: string;
+  active: number; // 1 = Active, 2 = Inactive
   createdBy: string;
   created_on: string;
 }
 
-
-
 const UnitMaster = () => {
-
-
-
   const { toast } = useToast();
-
   const [units, setUnits] = useState<Unit[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
+  // For delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
+
   // Pagination states
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
   const columns: Column<Unit>[] = [
-  { header: "Unit Name", accessor: "name" },
-  { header: "code", accessor: "code" },
-  {
+    { header: "Unit Name", accessor: "name" },
+    { header: "Code", accessor: "code" },
+    {
       header: "Status",
       accessor: "active",
       render: (row) => (
-        <Badge variant={row.active === "1" ? "default" : "secondary"}>
-          {row.active === "1" ? "Active" : "Inactive"}
+        <Badge variant={row.active === 1 ? "default" : "secondary"}>
+          {row.active === 1 ? "Active" : "Inactive"}
         </Badge>
-
       ),
     },
-  {
-  header: "Actions",
-  accessor: "actions",
-  render: (row) => (
-    <div className="flex gap-2">
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => handleEdit(row)}
-      >
-        <Edit className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => handleDelete(row.id)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-    </div>
-  ),
-}
+    {
+      header: "Actions",
+      accessor: "actions",
+      render: (row) => (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleEdit(row)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => openDeleteDialog(row)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
 
-];
   // Fetch units from API
   const fetchUnits = async (pageNum: number = 1) => {
     try {
       const res = await get(`/master/units/?page=${pageNum}`);
-
       setUnits(res.results || []);
       setTotalPages(Math.ceil(res.count / 10));
     } catch (err) {
@@ -94,8 +96,8 @@ const UnitMaster = () => {
     fetchUnits(page);
   }, [page]);
 
-  // Save / Update
-  const handleSave = (formData: any) => {
+  // Save / Update API
+  const handleSave = async (formData: any) => {
     if (!formData.name?.trim()) {
       toast({
         title: "Validation Error",
@@ -105,29 +107,35 @@ const UnitMaster = () => {
       return;
     }
 
-    if (editingUnit) {
-      setUnits((prev) =>
-        prev.map((unit) =>
-          unit.id === editingUnit.id ? { ...unit, ...formData } : unit
-        )
-      );
-      toast({ title: "Success", description: "Unit updated successfully" });
-    } else {
-      const newUnit: Unit = {
-        id: Date.now(), // temporary id
-        name: formData.name,
-        code: formData.code,
-        description: formData.description,
-        active: formData.status || "Active",
-        createdBy: "Admin",
-        created_on: new Date().toISOString(),
-      };
-      setUnits((prev) => [...prev, newUnit]);
-      toast({ title: "Success", description: "Unit created successfully" });
-    }
+    const payload = {
+      name: formData.name,
+      code: formData.code,
+      active: formData.status === "Active" ? 1 : 2,
+    };
 
-    setIsDialogOpen(false);
-    setEditingUnit(null);
+    try {
+      if (editingUnit) {
+        const payloadWithId = { ...payload, id: editingUnit.id };
+        // UPDATE
+        await put(`/master/units/`, payloadWithId);
+        toast({ title: "Success", description: "Unit updated successfully" });
+      } else {
+        // CREATE
+        await post(`/master/units/`, payload);
+        toast({ title: "Success", description: "Unit created successfully" });
+      }
+
+      fetchUnits(page); // refresh table
+      setIsDialogOpen(false);
+      setEditingUnit(null);
+    } catch (err) {
+      console.error("Failed to save unit", err);
+      toast({
+        title: "Error",
+        description: "Failed to save unit",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleEdit = (unit: Unit) => {
@@ -135,21 +143,39 @@ const UnitMaster = () => {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this unit?")) {
-      setUnits((prev) => prev.filter((unit) => unit.id !== id));
+  // Open delete confirmation dialog
+  const openDeleteDialog = (unit: Unit) => {
+    setUnitToDelete(unit);
+    setDeleteDialogOpen(true);
+  };
+
+  // Delete API
+  const handleDelete = async () => {
+    if (!unitToDelete) return;
+    try {
+      const payload = { id: unitToDelete.id, delete: true };
+      await del(`/master/units/`, payload);
+      setUnits((prev) => prev.filter((unit) => unit.id !== unitToDelete.id));
       toast({
         title: "Success",
         description: "Unit deleted successfully",
       });
+    } catch (err) {
+      console.error("Delete failed", err);
+      toast({
+        title: "Error",
+        description: "Failed to delete unit",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setUnitToDelete(null);
     }
   };
 
   // Filter by search
-  const filteredUnits = units.filter(
-    (unit) =>
-      unit.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      unit.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredUnits = units.filter((unit) =>
+    unit.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -171,19 +197,23 @@ const UnitMaster = () => {
           fields={[
             { name: "name", label: "Unit Name", type: "text", required: true },
             { name: "code", label: "Unit Code", type: "text" },
-            { name: "description", label: "Description", type: "textarea" },
             {
               name: "status",
-              label: "Status",
-              type: "dropdown",
-              options: [
-                { label: "Active", value: "Active" },
-                { label: "Inactive", value: "Inactive" },
-              ],
+              label: "Active",
+              type: "checkbox",
+              required: false,
             },
           ]}
           onSubmit={handleSave}
-          initialValues={units}
+          initialValues={
+            editingUnit
+              ? {
+                  name: editingUnit.name,
+                  code: editingUnit.code,
+                  status: editingUnit.active === 1 ? "Active" : "Inactive",
+                }
+              : {}
+          }
           trigger={
             <Button
               onClick={() => {
@@ -243,6 +273,38 @@ const UnitMaster = () => {
           Next
         </Button>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <div>Are you sure you want to delete this unit?</div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <DynamicFormDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Confirm Delete"
+        description="Are you sure you want to delete this unit?"
+        fields={[]} // No fields for delete
+        onSubmit={handleDelete}
+        initialValues={{}}
+        trigger={null}
+      />
     </div>
   );
 };

@@ -43,11 +43,11 @@ export function post(endpoint: string, data?: any) {
 }
 
 export function put(endpoint: string, data?: any) {
-  return request("PUT", endpoint, data);
+  return request("POST", endpoint, data);
 }
 
-export function del(endpoint: string) {
-  return request("DELETE", endpoint);
+export function del(endpoint: string , data?: any) {
+  return request("POST", endpoint , data);
 }
 
 // Login API (does not use auth token)

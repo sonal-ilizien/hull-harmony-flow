@@ -1,6 +1,13 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // ---------------- Table Components ----------------
 const Table = React.forwardRef<
@@ -10,7 +17,10 @@ const Table = React.forwardRef<
   <div className="relative w-full overflow-auto">
     <table
       ref={ref}
-      className={cn("w-full caption-bottom text-sm", className)}
+      className={cn(
+        "w-full caption-bottom text-sm border border-gray-400 rounded-lg border-collapse",
+        className
+      )}
       {...props}
     />
   </div>
@@ -21,7 +31,11 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b", className)} {...props} />
+  <thead
+    ref={ref}
+    className={cn("bg-[#1a2746] text-white", className)} // Navy Blue Header
+    {...props}
+  />
 ));
 TableHeader.displayName = "TableHeader";
 
@@ -44,7 +58,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
+      "border-b border-gray-400 transition-colors hover:bg-gray-100 data-[state=selected]:bg-gray-200",
       className
     )}
     {...props}
@@ -59,7 +73,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-medium text-muted-foreground",
+      "h-12 px-4 text-left align-middle font-semibold border border-gray-400 text-white",
       className
     )}
     {...props}
@@ -71,7 +85,14 @@ const TableCell = React.forwardRef<
   HTMLTableCellElement,
   React.TdHTMLAttributes<HTMLTableCellElement>
 >(({ className, ...props }, ref) => (
-  <td ref={ref} className={cn("p-4 align-middle", className)} {...props} />
+  <td
+    ref={ref}
+    className={cn(
+      "px-4 py-2 border border-gray-400 text-gray-800",
+      className
+    )}
+    {...props}
+  />
 ));
 TableCell.displayName = "TableCell";
 
@@ -116,7 +137,7 @@ const TablePagination: React.FC<PaginationProps> = ({
 export interface Column<T> {
   header: string;
   accessor: keyof T | "actions";
-  render?: (row: T) => React.ReactNode; // custom renderer
+  render?: (row: T) => React.ReactNode;
 }
 
 interface DataTableProps<T> {
@@ -135,6 +156,8 @@ export function DataTable<T extends Record<string, any>>({
   onDelete,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = React.useState(1);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [rowToDelete, setRowToDelete] = React.useState<T | null>(null);
 
   const totalPages = Math.max(1, Math.ceil(data.length / rowsPerPage));
 
@@ -143,8 +166,74 @@ export function DataTable<T extends Record<string, any>>({
     currentPage * rowsPerPage
   );
 
+  const handleDeleteClick = (row: T) => {
+    setRowToDelete(row);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (rowToDelete && onDelete) {
+      onDelete(rowToDelete);
+    }
+    setDeleteDialogOpen(false);
+    setRowToDelete(null);
+  };
+
+  // ---------------- Import Handler ----------------
+  const handleImport = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".csv,.xlsx,.xls";
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (file) {
+        alert(`Imported file: ${file.name}`); // replace with actual logic
+      }
+    };
+    input.click();
+  };
+
+  // ---------------- Export Handler ----------------
+  const handleExport = () => {
+    const headers = columns.map((col) => col.header).join(",");
+    const rows = data.map((row) =>
+      columns
+        .map((col) =>
+          col.accessor !== "actions" ? JSON.stringify(row[col.accessor]) : ""
+        )
+        .join(",")
+    );
+    const csvContent = [headers, ...rows].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "export.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-4">
+      {/* Toolbar with Import / Export */}
+      <div className="flex justify-end gap-2">
+        <Button
+          className="bg-[#1a2746] text-white hover:bg-[#223366]"
+          onClick={handleImport}
+        >
+          Import
+        </Button>
+        <Button
+          className="bg-green-600 text-white hover:bg-green-700"
+          onClick={handleExport}
+        >
+          Export
+        </Button>
+      </div>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -166,7 +255,8 @@ export function DataTable<T extends Record<string, any>>({
                         {onEdit && (
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="secondary"
+                            className="bg-[#1a2746] text-white hover:bg-[#223366] border border-gray-400"
                             onClick={() => onEdit(row)}
                           >
                             Edit
@@ -176,7 +266,8 @@ export function DataTable<T extends Record<string, any>>({
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => onDelete(row)}
+                            className="bg-red-600 text-white hover:bg-red-700 border border-gray-400"
+                            onClick={() => handleDeleteClick(row)}
                           >
                             Delete
                           </Button>
@@ -202,6 +293,24 @@ export function DataTable<T extends Record<string, any>>({
           onPageChange={setCurrentPage}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Delete</DialogTitle>
+          </DialogHeader>
+          <div>Are you sure you want to delete this record?</div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

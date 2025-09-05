@@ -1,36 +1,36 @@
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Edit, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
 import { DataTable, Column } from "@/components/ui/table";
+import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { DynamicFormDialog } from "@/components/DynamicFormDialog";
 import { get, post, put, del } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
 
-interface Command {
+interface DamageType {
   id: number;
   name: string;
-  code: string;
+  code?: string;
   active: number; // 1 = Active, 2 = Inactive
-  created_on: string;
+  created_by?: string;
+  created_on?: string;
 }
 
-const CommandMaster = () => {
+const DamageTypeMaster = () => {
   const { toast } = useToast();
-  const [commands, setCommands] = useState<Command[]>([]);
+  const [damageTypes, setDamageTypes] = useState<DamageType[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCommand, setEditingCommand] = useState<Command | null>(null);
+  const [editingDamageType, setEditingDamageType] = useState<DamageType | null>(null);
 
-  // Pagination
+  // Pagination states
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Table columns
-  const columns: Column<Command>[] = [
-    { header: "Name", accessor: "name" },
+  const columns: Column<DamageType>[] = [
+    { header: "Damage Type Name", accessor: "name" },
     { header: "Code", accessor: "code" },
     {
       header: "Status",
@@ -41,7 +41,6 @@ const CommandMaster = () => {
         </Badge>
       ),
     },
-    { header: "Created Date", accessor: "created_on" },
     {
       header: "Actions",
       accessor: "actions",
@@ -66,24 +65,23 @@ const CommandMaster = () => {
     },
   ];
 
-  // Fetch commands from API
-  const fetchCommands = async (pageNum: number = 1) => {
+  // Fetch damage types from API
+  const fetchDamageTypes = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/commands/?page=${pageNum}`);
-      setCommands(res.results || []);
+      const res = await get(`/master/damagetypes/?page=${pageNum}`);
+      setDamageTypes(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {
-      console.error("Failed to fetch commands", err);
       toast({
         title: "Error",
-        description: "Failed to fetch commands",
+        description: "Failed to fetch damage types",
         variant: "destructive",
       });
     }
   };
 
   useEffect(() => {
-    fetchCommands(page);
+    fetchDamageTypes(page);
   }, [page]);
 
   // Save / Update API
@@ -91,7 +89,7 @@ const CommandMaster = () => {
     if (!formData.name?.trim()) {
       toast({
         title: "Validation Error",
-        description: "Command name is required",
+        description: "Damage Type name is required",
         variant: "destructive",
       });
       return;
@@ -104,51 +102,47 @@ const CommandMaster = () => {
     };
 
     try {
-      if (editingCommand) {
-        const payloadWithId = { ...payload, id: editingCommand.id };
-        // UPDATE
-        await put(`/master/commands/`, payloadWithId);
-        toast({ title: "Success", description: "Command updated successfully" });
+      if (editingDamageType) {
+        const payloadWithId = { ...payload, id: editingDamageType.id };
+        await put(`/master/damagetypes/`, payloadWithId);
+        toast({ title: "Success", description: "Damage Type updated successfully" });
       } else {
-        // CREATE
-        await post(`/master/commands/`, payload);
-        toast({ title: "Success", description: "Command created successfully" });
+        await post(`/master/damagetypes/`, payload);
+        toast({ title: "Success", description: "Damage Type created successfully" });
       }
 
-      fetchCommands(page); // refresh table
+      fetchDamageTypes(page);
       setIsDialogOpen(false);
-      setEditingCommand(null);
+      setEditingDamageType(null);
     } catch (err) {
-      console.error("Failed to save command", err);
       toast({
         title: "Error",
-        description: "Failed to save command",
+        description: "Failed to save damage type",
         variant: "destructive",
       });
     }
   };
 
-  const handleEdit = (command: Command) => {
-    setEditingCommand(command);
+  const handleEdit = (damageType: DamageType) => {
+    setEditingDamageType(damageType);
     setIsDialogOpen(true);
   };
 
   // Delete API
   const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this command?")) {
+    if (confirm("Are you sure you want to delete this damage type?")) {
       try {
         const payload = { id: id, delete: true };
-        await del(`/master/commands/`, payload);
-        setCommands((prev) => prev.filter((c) => c.id !== id));
+        await del(`/master/damagetypes/`, payload);
+        setDamageTypes((prev) => prev.filter((dt) => dt.id !== id));
         toast({
           title: "Success",
-          description: "Command deleted successfully",
+          description: "Damage Type deleted successfully",
         });
       } catch (err) {
-        console.error("Delete failed", err);
         toast({
           title: "Error",
-          description: "Failed to delete command",
+          description: "Failed to delete damage type",
           variant: "destructive",
         });
       }
@@ -156,9 +150,8 @@ const CommandMaster = () => {
   };
 
   // Filter by search
-  const filteredCommands = commands.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.code.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDamageTypes = damageTypes.filter((dt) =>
+    dt.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -166,20 +159,20 @@ const CommandMaster = () => {
       {/* Header + Add Button */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Command Master</h1>
+          <h1 className="text-3xl font-bold text-primary">Damage Type Master</h1>
           <p className="text-muted-foreground">
-            Manage naval commands and their headquarters
+            Manage damage types
           </p>
         </div>
 
         <DynamicFormDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
-          title={editingCommand ? "Edit Command" : "Add Command"}
+          title={editingDamageType ? "Edit Damage Type" : "Add Damage Type"}
           description="Fill out the details below"
           fields={[
-            { name: "name", label: "Command Name", type: "text", required: true },
-            { name: "code", label: "Command Code", type: "text" },
+            { name: "name", label: "Damage Type Name", type: "text", required: true },
+            { name: "code", label: "Damage Type Code", type: "text" },
             {
               name: "status",
               label: "Active",
@@ -189,23 +182,23 @@ const CommandMaster = () => {
           ]}
           onSubmit={handleSave}
           initialValues={
-            editingCommand
+            editingDamageType
               ? {
-                  name: editingCommand.name,
-                  code: editingCommand.code,
-                  status: editingCommand.active === 1 ? "Active" : "Inactive",
+                  name: editingDamageType.name,
+                  code: editingDamageType.code,
+                  status: editingDamageType.active === 1 ? "Active" : "Inactive",
                 }
               : {}
           }
           trigger={
             <Button
               onClick={() => {
-                setEditingCommand(null);
+                setEditingDamageType(null);
                 setIsDialogOpen(true);
               }}
             >
               <Plus className="mr-2 h-4 w-4" />
-              Add Command
+              Add Damage Type
             </Button>
           }
         />
@@ -217,7 +210,7 @@ const CommandMaster = () => {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search commands..."
+              placeholder="Search damage types..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -226,13 +219,13 @@ const CommandMaster = () => {
         </CardContent>
       </Card>
 
-      {/* Commands Table */}
+      {/* Damage Types Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Commands</CardTitle>
+          <CardTitle>Damage Types</CardTitle>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={filteredCommands} rowsPerPage={10} />
+          <DataTable columns={columns} data={filteredDamageTypes} rowsPerPage={10} />
         </CardContent>
       </Card>
 
@@ -260,4 +253,4 @@ const CommandMaster = () => {
   );
 };
 
-export default CommandMaster;
+export default DamageTypeMaster;

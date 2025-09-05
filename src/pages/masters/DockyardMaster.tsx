@@ -12,12 +12,10 @@ import { get, post, put, del } from "@/lib/api";
 interface Dockyard {
   id: number;
   name: string;
-  location: string;
-  capacity: string;
-  facilities: string;
-  status: string;
-  createdBy: string;
-  createdAt: string;
+  code: string;
+  active: number; // 1 = Active, 2 = Inactive
+  created_on: string;
+  created_by: number;
 }
 
 const DockyardMaster = () => {
@@ -28,31 +26,25 @@ const DockyardMaster = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDockyard, setEditingDockyard] = useState<Dockyard | null>(null);
 
-  // ✅ Table columns
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Table columns
   const columns: Column<Dockyard>[] = [
     { header: "Name", accessor: "name" },
-    { header: "Location", accessor: "location" },
-    { header: "Capacity", accessor: "capacity" },
-    {
-      header: "Facilities",
-      accessor: "facilities",
-      render: (row) => (
-        <span className="truncate max-w-xs" title={row.facilities}>
-          {row.facilities || "-"}
-        </span>
-      ),
-    },
+    { header: "Code", accessor: "code" },
     {
       header: "Status",
-      accessor: "status",
+      accessor: "active",
       render: (row) => (
-        <Badge variant={row.status === "Active" ? "default" : "secondary"}>
-          {row.status}
+        <Badge variant={row.active === 1 ? "default" : "secondary"}>
+          {row.active === 1 ? "Active" : "Inactive"}
         </Badge>
       ),
     },
-    { header: "Created By", accessor: "createdBy" },
-    { header: "Created Date", accessor: "createdAt" },
+    { header: "Created By", accessor: "created_by" },
+    { header: "Created Date", accessor: "created_on" },
     {
       header: "Actions",
       accessor: "actions",
@@ -73,38 +65,25 @@ const DockyardMaster = () => {
     },
   ];
 
-  // ✅ Form fields
+  // Form fields
   const fields: FieldConfig[] = [
     { name: "name", label: "Dockyard Name", type: "text", required: true },
-    { name: "location", label: "Location", type: "text", required: true },
-    {
-      name: "capacity",
-      label: "Capacity & Capabilities",
-      type: "text",
-    },
-    {
-      name: "facilities",
-      label: "Facilities & Services",
-      type: "textarea",
-    },
+    { name: "code", label: "Dockyard Code", type: "text", required: true },
     {
       name: "status",
-      label: "Status",
-      type: "dropdown",
-      options: [
-        { label: "Active", value: "Active" },
-        { label: "Inactive", value: "Inactive" },
-      ],
-      required: true,
+      label: "Active",
+      type: "checkbox",
+      required: false,
     },
   ];
 
-  // ✅ Fetch dockyards
-  const fetchDockyards = async () => {
+  // Fetch dockyards with pagination
+  const fetchDockyards = async (pageNum: number = 1) => {
     setLoading(true);
     try {
-      const data = await get("master/dockyards/");
-      setDockyards(data);
+      const res = await get(`/master/dockyards/?page=${pageNum}`);
+      setDockyards(res.results || []);
+      setTotalPages(Math.ceil((res.count || 0) / 5));
     } catch {
       toast({
         title: "Error",
@@ -117,26 +96,32 @@ const DockyardMaster = () => {
   };
 
   useEffect(() => {
-    fetchDockyards();
-  }, []);
+    fetchDockyards(page);
+  }, [page]);
 
-  // ✅ Save (Create / Update)
+  // Save (Create / Update)
   const handleSave = async (formData: any) => {
+    const payload = {
+      name: formData.name,
+      code: formData.code,
+      active: formData.status === "Active" ? 1 : 2,
+    };
     try {
       if (editingDockyard) {
         const updated = await put(
-          `master/dockyards/${editingDockyard.id}/`,
-          formData
+          `/master/dockyards/${editingDockyard.id}/`,
+          payload
         );
         setDockyards((prev) =>
           prev.map((d) => (d.id === editingDockyard.id ? updated : d))
         );
         toast({ title: "Success", description: "Dockyard updated successfully" });
       } else {
-        const created = await post("master/dockyards/", formData);
+        const created = await post("/master/dockyards/", payload);
         setDockyards((prev) => [...prev, created]);
         toast({ title: "Success", description: "Dockyard created successfully" });
       }
+      fetchDockyards(page);
     } catch {
       toast({
         title: "Error",
@@ -149,22 +134,26 @@ const DockyardMaster = () => {
     }
   };
 
-  // ✅ Edit
+  // Edit
   const handleEdit = (dockyard: Dockyard) => {
-    setEditingDockyard(dockyard);
+    setEditingDockyard({
+      ...dockyard,
+      status: dockyard.active === 1 ? "Active" : "Inactive",
+    } as any);
     setIsDialogOpen(true);
   };
 
-  // ✅ Delete
+  // Delete
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this dockyard?")) {
       try {
-        await del(`master/dockyards/${id}/`);
+        await del(`/master/dockyards/${id}/`);
         setDockyards((prev) => prev.filter((d) => d.id !== id));
         toast({
           title: "Success",
           description: "Dockyard deleted successfully",
         });
+        fetchDockyards(page);
       } catch {
         toast({
           title: "Error",
@@ -175,11 +164,11 @@ const DockyardMaster = () => {
     }
   };
 
-  // ✅ Search
+  // Search
   const filteredDockyards = dockyards.filter(
     (d) =>
       d.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.location.toLowerCase().includes(searchTerm.toLowerCase())
+      d.code.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -203,7 +192,15 @@ const DockyardMaster = () => {
           }
           fields={fields}
           onSubmit={handleSave}
-          initialValues={editingDockyard || {}}
+          initialValues={
+            editingDockyard
+              ? {
+                  name: editingDockyard.name,
+                  code: editingDockyard.code,
+                  status: editingDockyard.active === 1 ? "Active" : "Inactive",
+                }
+              : {}
+          }
           trigger={
             <Button
               className="bg-gradient-primary"
@@ -240,6 +237,27 @@ const DockyardMaster = () => {
           <DataTable columns={columns} data={filteredDockyards} rowsPerPage={5} />
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      <div className="flex justify-center gap-2 mt-4">
+        <Button
+          variant="outline"
+          disabled={page === 1}
+          onClick={() => setPage((p) => p - 1)}
+        >
+          Previous
+        </Button>
+        <span className="text-sm">
+          Page {page} of {totalPages}
+        </span>
+        <Button
+          variant="outline"
+          disabled={page === totalPages}
+          onClick={() => setPage((p) => p + 1)}
+        >
+          Next
+        </Button>
+      </div>
     </div>
   );
 };

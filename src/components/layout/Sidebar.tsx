@@ -22,16 +22,36 @@ import hullInsightLogo from "@/assets/hull-insight-logo.png";
 
 const sidebarItems = [
   {
+    title: "Dashboards",
+    icon: BarChart3,
+    path: "/dashboard"
+  },
+  // ...inside Global Masters items array...
+{
+  title: "User",
+  icon: Users,
+  items: [
+    { title: "User", path: "/masters/user" },
+    { title: "Root Config", path: "/masters/rootconfig" },
+    { title: "Role", path: "/masters/role" }
+  ]
+},
+  {
     title: "Global Masters",
     icon: Database,
     items: [
-      { title: "Unit Master", path: "/masters/unit" },
-      { title: "Command Master", path: "/masters/command" },
-      { title: "Vessel Master", path: "/masters/vessel" },
-      { title: "Dockyard Master", path: "/masters/dockyard" },
-      { title: "Fleet Master", path: "/masters/fleet" },
-      { title: "Equipment Master", path: "/masters/equipment" },
-      { title: "User Master", path: "/masters/user" }
+      { title: "Unit", path: "/masters/unit" },
+      { title: "Command", path: "/masters/command" },
+      { title: "Vessel", path: "/masters/vessel" },
+      { title: "Dockyard", path: "/masters/dockyard" },
+      { title: "Equipment", path: "/masters/equipment" },
+      { title: "Module", path: "/masters/module" },           // <-- Add this line
+      { title: "Submodule", path: "/masters/submodule" },
+      { title: "Operational Status", path: "/masters/operationalstatus" },
+      { title: "Severity", path: "/masters/severity" },
+      { title: "Damage Type", path: "/masters/damagetype" },
+      { title: "System", path: "/masters/system" },
+      { title: "Compartment", path: "/masters/compartment" }
     ]
   },
   {
@@ -54,11 +74,7 @@ const sidebarItems = [
       { title: "Compliance Status", path: "/survey/compliance" }
     ]
   },
-  {
-    title: "Dashboards",
-    icon: BarChart3,
-    path: "/dashboard"
-  },
+  
   {
     title: "Reports",
     icon: FileText,
@@ -106,14 +122,16 @@ const Sidebar = ({ collapsed }: SidebarProps) => {
     <img
       src={hullInsightLogo}
       alt="Hull Insight"
-      className="w-8 h-8 transition-transform duration-300 hover:scale-110"
+      className="w-12 h-12 transition-transform duration-300 hover:scale-110"
     />
     {!collapsed && (
       <div>
-        <h2 className="font-bold text-lg text-sidebar-primary">
+        <h2
+          className="font-bold text-lg bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-700 bg-[length:200%_200%] bg-clip-text text-transparent animate-gradient-move"
+        >
           Hull Insight
         </h2>
-        <p className="text-xs text-muted-foreground">Naval Operations</p>
+        <p className="text-xs bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-700 bg-[length:200%_200%] bg-clip-text text-transparent animate-gradient-move">Naval Operations</p>
       </div>
     )}
   </div>
