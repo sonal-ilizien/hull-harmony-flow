@@ -13,10 +13,10 @@ interface Vessel {
   id: number;
   name: string;
   code: string;
-  classofvessel: { id: number; name: string } | null;
-  vesseltype: { id: number; name: string } | null;
-  yard: { id: number; name: string } | null;
-  command: { id: number; name: string } | null;
+  classofvessel: { id: number; name: string };
+  vesseltype: { id: number; name: string };
+  yard: { id: number; name: string };
+  command: { id: number; name: string };
   year_of_build?: number;
   year_of_delivery?: number;
   active: number;
@@ -78,11 +78,7 @@ const VesselMaster = () => {
           <Button variant="outline" size="icon" onClick={() => handleEdit(row)}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handleDelete(row.id)}
-          >
+          <Button variant="outline" size="icon" onClick={() => handleDelete(row.id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -90,7 +86,7 @@ const VesselMaster = () => {
     },
   ];
 
-  // Form fields
+  // Form fields - dropdowns populated from vessel data
   const fields: FieldConfig[] = [
     { name: "name", label: "Vessel Name", type: "text", required: true },
     { name: "code", label: "Vessel Code", type: "text" },
@@ -98,28 +94,40 @@ const VesselMaster = () => {
       name: "classofvessel",
       label: "Class of Vessel",
       type: "dropdown",
-      options: [], // TODO: Populate dynamically if needed
+      options: Array.from(new Set(vessels.map((v) => v.classofvessel.id))).map((id) => {
+        const item = vessels.find((v) => v.classofvessel.id === id);
+        return { label: item!.classofvessel.name, value: id };
+      }),
       required: true,
     },
     {
       name: "vesseltype",
       label: "Vessel Type",
       type: "dropdown",
-      options: [],
+      options: Array.from(new Set(vessels.map((v) => v.vesseltype.id))).map((id) => {
+        const item = vessels.find((v) => v.vesseltype.id === id);
+        return { label: item!.vesseltype.name, value: id };
+      }),
       required: true,
     },
     {
       name: "command",
       label: "Command",
       type: "dropdown",
-      options: [],
+      options: Array.from(new Set(vessels.map((v) => v.command.id))).map((id) => {
+        const item = vessels.find((v) => v.command.id === id);
+        return { label: item!.command.name, value: id };
+      }),
       required: true,
     },
     {
       name: "yard",
       label: "Dockyard",
       type: "dropdown",
-      options: [],
+      options: Array.from(new Set(vessels.map((v) => v.yard.id))).map((id) => {
+        const item = vessels.find((v) => v.yard.id === id);
+        return { label: item!.yard.name, value: id };
+      }),
     },
     {
       name: "year_of_build",
@@ -143,10 +151,10 @@ const VesselMaster = () => {
     },
   ];
 
-  // Fetch vessels with pagination
+  // Fetch vessels
   const fetchVessels = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/vessels/?page=${pageNum}`);
+      const res = await get(`/master/vessels/?page=${pageNum}&order_by=-name`);
       setVessels(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {
@@ -162,7 +170,6 @@ const VesselMaster = () => {
     fetchVessels(page);
   }, [page]);
 
-  // Save / Update
   const handleSave = async (formData: any) => {
     const payload = {
       ...formData,
@@ -193,7 +200,6 @@ const VesselMaster = () => {
     setIsDialogOpen(true);
   };
 
-  // Delete
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this vessel?")) {
       try {
@@ -214,7 +220,6 @@ const VesselMaster = () => {
     }
   };
 
-  // Search
   const filteredVessels = vessels.filter(
     (v) =>
       v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -224,7 +229,6 @@ const VesselMaster = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header + Add Button */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-primary">Vessel Master</h1>
@@ -243,6 +247,10 @@ const VesselMaster = () => {
             editingVessel
               ? {
                   ...editingVessel,
+                  classofvessel: editingVessel.classofvessel.id,
+                  vesseltype: editingVessel.vesseltype.id,
+                  command: editingVessel.command.id,
+                  yard: editingVessel.yard.id,
                   active: editingVessel.active === 1 ? "1" : "0",
                 }
               : {}
@@ -261,7 +269,6 @@ const VesselMaster = () => {
         />
       </div>
 
-      {/* Search */}
       <Card>
         <CardContent className="p-4">
           <div className="relative flex-1">
@@ -276,7 +283,6 @@ const VesselMaster = () => {
         </CardContent>
       </Card>
 
-      {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle>Vessels</CardTitle>
@@ -286,23 +292,14 @@ const VesselMaster = () => {
         </CardContent>
       </Card>
 
-      {/* Pagination */}
       <div className="flex justify-center gap-2 mt-4">
-        <Button
-          variant="outline"
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-        >
+        <Button variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
           Previous
         </Button>
         <span className="text-sm">
           Page {page} of {totalPages}
         </span>
-        <Button
-          variant="outline"
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => p + 1)}
-        >
+        <Button variant="outline" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
           Next
         </Button>
       </div>

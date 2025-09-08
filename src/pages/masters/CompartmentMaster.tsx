@@ -68,7 +68,7 @@ const CompartmentMaster = () => {
   // Fetch compartments from API
   const fetchCompartments = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/compartments/?page=${pageNum}`);
+      const res = await get(`/master/compartments/?page=${pageNum}&order_by=-name`);
       setCompartments(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {
@@ -159,7 +159,7 @@ const CompartmentMaster = () => {
       {/* Header + Add Button */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Compartment Master</h1>
+          <h1 className="text-3xl font-bold text-primary">Compartment</h1>
           <p className="text-muted-foreground">
             Manage compartments
           </p>

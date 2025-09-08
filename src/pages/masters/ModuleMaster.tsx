@@ -68,7 +68,7 @@ const ModuleMaster = () => {
   // Fetch modules from API
   const fetchModules = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/modules/?page=${pageNum}`);
+      const res = await get(`/master/modules/?page=${pageNum}&order_by=-name`);
       setModules(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {

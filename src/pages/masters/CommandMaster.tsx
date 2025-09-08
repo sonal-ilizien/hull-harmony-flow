@@ -41,7 +41,7 @@ const CommandMaster = () => {
         </Badge>
       ),
     },
-    { header: "Created Date", accessor: "created_on" },
+    // { header: "Created Date", accessor: "created_on" },
     {
       header: "Actions",
       accessor: "actions",
@@ -69,7 +69,7 @@ const CommandMaster = () => {
   // Fetch commands from API
   const fetchCommands = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/commands/?page=${pageNum}`);
+      const res = await get(`/master/commands/?page=${pageNum}&order_by=-name`);
       setCommands(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {
@@ -166,7 +166,7 @@ const CommandMaster = () => {
       {/* Header + Add Button */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-primary">Command Master</h1>
+          <h1 className="text-3xl font-bold text-primary">Command</h1>
           <p className="text-muted-foreground">
             Manage naval commands and their headquarters
           </p>

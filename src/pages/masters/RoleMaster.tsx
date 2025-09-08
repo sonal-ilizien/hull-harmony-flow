@@ -60,8 +60,8 @@ const RoleMaster = () => {
 
   const fetchRoles = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/access/user-roles/?page=${pageNum}`); // <-- updated endpoint
-      setRoles(res.results || []);
+      const res = await get(`/access/user-roles/?page=${pageNum}&order_by=-name`); // <-- updated endpoint
+      setRoles(res || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {
       toast({

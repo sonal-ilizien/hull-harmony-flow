@@ -68,7 +68,7 @@ const DamageTypeMaster = () => {
   // Fetch damage types from API
   const fetchDamageTypes = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/damagetypes/?page=${pageNum}`);
+      const res = await get(`/master/damagetypes/?page=${pageNum}&order_by=-name`);
       setDamageTypes(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {

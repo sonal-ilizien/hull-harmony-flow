@@ -8,14 +8,14 @@ import { useToast } from "@/hooks/use-toast";
 import { DynamicFormDialog } from "@/components/DynamicFormDialog";
 import { get, post, put, del } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
-import { set } from "date-fns";
 
 interface User {
   id: number;
-  username: string;
+  loginname: string;
   email: string;
-  role: string;
-  active: number; // 1 = Active, 2 = Inactive
+  role_name: string;
+  status: number; // 1 = Active, 2 = Inactive
+  
 }
 
 const UserMaster = () => {
@@ -67,21 +67,22 @@ const UserMaster = () => {
   ];
 
   // Fetch users from API
-  const fetchUsers = async (pageNum: number = 1) => {
-    try {
-      const res = await get(`/api/auth/users/?page=${pageNum}`);
-      setUsers(Array.isArray(res.results.data) ? res.results : []);
+const fetchUsers = async (pageNum: number = 1) => {
+  try {
+    const res = await get(`/api/auth/users/?page=${pageNum}&order_by=-loginname`);
 
-      console.log(      setUsers(Array.isArray(res.results.data) ? res.results : []));
-      setTotalPages(Math.ceil((res.count || 0) / 10));
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch users",
-        variant: "destructive",
-      });
-    }
-  };
+    // Access the actual array
+    setUsers(res.results?.data || []);
+
+    setTotalPages(Math.ceil((res.count || 0) / 10));
+  } catch (err) {
+    toast({
+      title: "Error",
+      description: "Failed to fetch users",
+      variant: "destructive",
+    });
+  }
+};
 
   useEffect(() => {
     fetchUsers(page);
@@ -156,7 +157,7 @@ const UserMaster = () => {
   // Filter by search
   const filteredUsers = Array.isArray(users)
     ? users.filter((user) =>
-        user.username.toLowerCase().includes(searchTerm.toLowerCase())
+        user.loginname.toLowerCase().includes(searchTerm.toLowerCase())
       )
     : [];
 
@@ -191,10 +192,10 @@ const UserMaster = () => {
           initialValues={
             editingUser
               ? {
-                  username: editingUser.username,
+                  username: editingUser.loginname,
                   email: editingUser.email,
-                  role: editingUser.role,
-                  status: editingUser.active === 1 ? "Active" : "Inactive",
+                  role: editingUser.role_name,
+                  status: editingUser.status === 1 ? "Active" : "Inactive",
                 }
               : {}
           }

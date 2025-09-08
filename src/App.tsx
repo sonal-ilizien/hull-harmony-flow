@@ -24,6 +24,7 @@ import SystemMaster from "@/pages/masters/SystemMaster"; // <-- Create this file
 import UserMaster from "@/pages/masters/UserMaster";
 import RootConfigMaster from "@/pages/masters/RootConfigMaster";
 import RoleMaster from "@/pages/masters/RoleMaster";
+import RoleAccess from "./pages/masters/RoleAccess";
 
 // Module imports
 import YardModule from "./pages/yard/YardModule";
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="/masters/user" element={<UserMaster />} />
           <Route path="/masters/rootconfig" element={<RootConfigMaster />} />
           <Route path="/masters/role" element={<RoleMaster />} />
+          <Route path="/masters/roleaccess" element={<RoleAccess />} />
           {/* Placeholder routes for other masters */}
           <Route path="masters/*" element={<div className="p-8 text-center text-muted-foreground">Master page coming soon...</div>} />
           

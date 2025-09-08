@@ -68,7 +68,7 @@ const SystemMaster = () => {
   // Fetch systems from API
   const fetchSystems = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/systems/?page=${pageNum}`);
+      const res = await get(`/master/systems/?page=${pageNum}&order_by=-name`);
       setSystems(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {

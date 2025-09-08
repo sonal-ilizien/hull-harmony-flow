@@ -43,8 +43,8 @@ const DockyardMaster = () => {
         </Badge>
       ),
     },
-    { header: "Created By", accessor: "created_by" },
-    { header: "Created Date", accessor: "created_on" },
+    // { header: "Created By", accessor: "created_by" },
+    // { header: "Created Date", accessor: "created_on" },
     {
       header: "Actions",
       accessor: "actions",
@@ -81,7 +81,7 @@ const DockyardMaster = () => {
   const fetchDockyards = async (pageNum: number = 1) => {
     setLoading(true);
     try {
-      const res = await get(`/master/dockyards/?page=${pageNum}`);
+      const res = await get(`/master/dockyards/?page=${pageNum}&order_by=-name`);
       setDockyards(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 5));
     } catch {

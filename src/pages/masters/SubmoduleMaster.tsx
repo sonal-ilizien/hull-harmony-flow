@@ -3,33 +3,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DataTable, Column } from "@/components/ui/table";
-import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import { Edit, Plus, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { FieldConfig } from "@/components/DynamicFormDialog";
 import { DynamicFormDialog } from "@/components/DynamicFormDialog";
+
 import { get, post, put, del } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
+
+// ---------------- Types ----------------
+interface Module {
+  id: number;
+  name: string;
+}
 
 interface Submodule {
   id: number;
   name: string;
   code?: string;
   active: number; // 1 = Active, 2 = Inactive
-  created_by?: string;
-  created_on?: string;
+  module?: Module;
 }
 
 const SubmoduleMaster = () => {
   const { toast } = useToast();
+
   const [submodules, setSubmodules] = useState<Submodule[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSubmodule, setEditingSubmodule] = useState<Submodule | null>(null);
 
-  // Pagination states
+  // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  // Columns for DataTable
   const columns: Column<Submodule>[] = [
+    { header: "Module", accessor: "module", render: (row) => row.module?.name || "-" },
     { header: "Submodule Name", accessor: "name" },
     { header: "Code", accessor: "code" },
     {
@@ -46,18 +57,10 @@ const SubmoduleMaster = () => {
       accessor: "actions",
       render: (row) => (
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handleEdit(row)}
-          >
+          <Button variant="outline" size="icon" onClick={() => handleEdit(row)}>
             <Edit className="h-4 w-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => handleDelete(row.id)}
-          >
+          <Button variant="outline" size="icon" onClick={() => handleDelete(row.id)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -65,33 +68,36 @@ const SubmoduleMaster = () => {
     },
   ];
 
-  // Fetch submodules from API
+  // Fetch Submodules
   const fetchSubmodules = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/submodules/?page=${pageNum}`);
+      const res = await get(`/master/submodules/?page=${pageNum}&order_by=-name`);
       setSubmodules(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch submodules",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to fetch submodules", variant: "destructive" });
+    }
+  };
+
+  // Fetch Modules for dropdown
+  const fetchModules = async () => {
+    try {
+      const res = await get(`/master/modules/?order_by=-name`);
+      setModules(res.results || []);
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to fetch modules", variant: "destructive" });
     }
   };
 
   useEffect(() => {
+    fetchModules();
     fetchSubmodules(page);
   }, [page]);
 
-  // Save / Update API
+  // Save / Update
   const handleSave = async (formData: any) => {
     if (!formData.name?.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Submodule name is required",
-        variant: "destructive",
-      });
+      toast({ title: "Validation Error", description: "Submodule name is required", variant: "destructive" });
       return;
     }
 
@@ -99,27 +105,22 @@ const SubmoduleMaster = () => {
       name: formData.name,
       code: formData.code,
       active: formData.status === "Active" ? 1 : 2,
+      module: formData.module_id,
     };
 
     try {
       if (editingSubmodule) {
-        const payloadWithId = { ...payload, id: editingSubmodule.id };
-        await put(`/master/submodules/`, payloadWithId);
+        await put(`/master/submodules/`, { ...payload, id: editingSubmodule.id });
         toast({ title: "Success", description: "Submodule updated successfully" });
       } else {
         await post(`/master/submodules/`, payload);
         toast({ title: "Success", description: "Submodule created successfully" });
       }
-
       fetchSubmodules(page);
       setIsDialogOpen(false);
       setEditingSubmodule(null);
     } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to save submodule",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to save submodule", variant: "destructive" });
     }
   };
 
@@ -128,31 +129,35 @@ const SubmoduleMaster = () => {
     setIsDialogOpen(true);
   };
 
-  // Delete API
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this submodule?")) {
       try {
-        const payload = { id: id, delete: true };
-        await del(`/master/submodules/`, payload);
+        await del(`/master/submodules/`, { id, delete: true });
         setSubmodules((prev) => prev.filter((s) => s.id !== id));
-        toast({
-          title: "Success",
-          description: "Submodule deleted successfully",
-        });
+        toast({ title: "Success", description: "Submodule deleted successfully" });
       } catch (err) {
-        toast({
-          title: "Error",
-          description: "Failed to delete submodule",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to delete submodule", variant: "destructive" });
       }
     }
   };
 
-  // Filter by search
   const filteredSubmodules = submodules.filter((s) =>
     s.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Form fields
+  const fields: FieldConfig[] = [
+    {
+      name: "module_id",
+      label: "Module",
+      type: "dropdown",
+      apiEndpoint: "/master/modules/",
+      required: true,
+    },
+    { name: "name", label: "Submodule Name", type: "text", required: true },
+    { name: "code", label: "Submodule Code", type: "text" },
+    { name: "status", label: "Active", type: "checkbox" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -160,9 +165,7 @@ const SubmoduleMaster = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-primary">Submodule Master</h1>
-          <p className="text-muted-foreground">
-            Manage submodules
-          </p>
+          <p className="text-muted-foreground">Manage submodules</p>
         </div>
 
         <DynamicFormDialog
@@ -170,26 +173,18 @@ const SubmoduleMaster = () => {
           onOpenChange={setIsDialogOpen}
           title={editingSubmodule ? "Edit Submodule" : "Add Submodule"}
           description="Fill out the details below"
-          fields={[
-            { name: "name", label: "Submodule Name", type: "text", required: true },
-            { name: "code", label: "Submodule Code", type: "text" },
-            {
-              name: "status",
-              label: "Active",
-              type: "checkbox",
-              required: false,
-            },
-          ]}
-          onSubmit={handleSave}
+          fields={fields}
           initialValues={
             editingSubmodule
               ? {
-                  name: editingSubmodule.name,
-                  code: editingSubmodule.code,
-                  status: editingSubmodule.active === 1 ? "Active" : "Inactive",
-                }
+                name: editingSubmodule.name,
+                code: editingSubmodule.code,
+                module_id: editingSubmodule.module?.id || undefined,
+                status: editingSubmodule.active === 1 ? "Active" : "Inactive",
+              }
               : {}
           }
+          onSubmit={handleSave}
           trigger={
             <Button
               onClick={() => {
@@ -219,7 +214,7 @@ const SubmoduleMaster = () => {
         </CardContent>
       </Card>
 
-      {/* Submodules Table */}
+      {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle>Submodules</CardTitle>
@@ -231,21 +226,11 @@ const SubmoduleMaster = () => {
 
       {/* Pagination */}
       <div className="flex justify-center gap-2 mt-4">
-        <Button
-          variant="outline"
-          disabled={page === 1}
-          onClick={() => setPage((p) => p - 1)}
-        >
+        <Button variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
           Previous
         </Button>
-        <span className="text-sm">
-          Page {page} of {totalPages}
-        </span>
-        <Button
-          variant="outline"
-          disabled={page === totalPages}
-          onClick={() => setPage((p) => p + 1)}
-        >
+        <span className="text-sm">Page {page} of {totalPages}</span>
+        <Button variant="outline" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
           Next
         </Button>
       </div>

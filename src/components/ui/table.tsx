@@ -14,11 +14,12 @@ const Table = React.forwardRef<
   HTMLTableElement,
   React.HTMLAttributes<HTMLTableElement>
 >(({ className, ...props }, ref) => (
-  <div className="relative w-full overflow-auto">
+  <div className="relative w-full overflow-auto rounded-xl shadow-md">
     <table
       ref={ref}
       className={cn(
-        "w-full caption-bottom text-sm border border-gray-400 rounded-lg border-collapse",
+        "w-full text-sm border border-gray-300 bg-blue-50 rounded-xl",
+        "border-collapse",
         className
       )}
       {...props}
@@ -33,7 +34,7 @@ const TableHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <thead
     ref={ref}
-    className={cn("bg-[#1a2746] text-white", className)} // Navy Blue Header
+    className={cn("bg-[#1a2746] text-white", className)}
     {...props}
   />
 ));
@@ -45,7 +46,7 @@ const TableBody = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tbody
     ref={ref}
-    className={cn("[&_tr:last-child]:border-0", className)}
+    className={cn("divide-y divide-gray-300", className)}
     {...props}
   />
 ));
@@ -58,7 +59,8 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-gray-400 transition-colors hover:bg-gray-100 data-[state=selected]:bg-gray-200",
+      "transition-colors hover:bg-blue-200",
+      "odd:bg-blue-50 even:bg-blue-100", // striped light blue
       className
     )}
     {...props}
@@ -73,7 +75,8 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-12 px-4 text-left align-middle font-semibold border border-gray-400 text-white",
+      "h-12 px-4 text-left align-middle font-medium text-sm tracking-wide",
+      "bg-[#1a2746] text-white border border-gray-300",
       className
     )}
     {...props}
@@ -88,7 +91,8 @@ const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      "px-4 py-2 border border-gray-400 text-gray-800",
+      "px-4 py-3 text-gray-800 text-sm whitespace-nowrap",
+      "border border-gray-300 bg-blue-50", // subtle blue cell background
       className
     )}
     {...props}
@@ -108,7 +112,7 @@ const TablePagination: React.FC<PaginationProps> = ({
   totalPages,
   onPageChange,
 }) => (
-  <div className="flex items-center justify-between py-2 px-4">
+  <div className="flex items-center justify-between py-3 px-4 border-t border-gray-300 bg-blue-50 rounded-b-xl">
     <Button
       variant="outline"
       size="sm"
@@ -118,7 +122,7 @@ const TablePagination: React.FC<PaginationProps> = ({
       Previous
     </Button>
 
-    <span className="text-sm">
+    <span className="text-sm font-medium">
       Page <b>{currentPage}</b> of {totalPages}
     </span>
 
@@ -220,6 +224,23 @@ export function DataTable<T extends Record<string, any>>({
 
   return (
     <div className="space-y-4">
+      {/* <Table className={className}> */}
+      {/* Toolbar with Import / Export */}
+      <div className="flex justify-end gap-2">
+        <Button
+          className="bg-[#1a2746] text-white hover:bg-[#223366] rounded-lg shadow-sm"
+          onClick={handleImport}
+        >
+          Import
+        </Button>
+        <Button
+          className="bg-green-600 text-white hover:bg-green-700 rounded-lg shadow-sm"
+          onClick={handleExport}
+        >
+          Export
+        </Button>
+      </div>
+
       <Table className={className}>
         <TableHeader>
           <TableRow>
@@ -242,7 +263,7 @@ export function DataTable<T extends Record<string, any>>({
                           <Button
                             size="sm"
                             variant="secondary"
-                            className="bg-[#1a2746] text-white hover:bg-[#223366] border border-gray-400"
+                            className="bg-[#1a2746] text-white hover:bg-[#223366] border border-gray-400 rounded-md"
                             onClick={() => onEdit(row)}
                           >
                             Edit
@@ -252,7 +273,7 @@ export function DataTable<T extends Record<string, any>>({
                           <Button
                             size="sm"
                             variant="destructive"
-                            className="bg-red-600 text-white hover:bg-red-700 border border-gray-400"
+                            className="bg-red-600 text-white hover:bg-red-700 border border-gray-400 rounded-md"
                             onClick={() => handleDeleteClick(row)}
                           >
                             Delete
@@ -282,13 +303,18 @@ export function DataTable<T extends Record<string, any>>({
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="rounded-xl shadow-lg">
           <DialogHeader>
             <DialogTitle>Confirm Delete</DialogTitle>
           </DialogHeader>
-          <div>Are you sure you want to delete this record?</div>
+          <div className="text-gray-700">
+            Are you sure you want to delete this record?
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+            >
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmDelete}>

@@ -68,7 +68,7 @@ const OperationalStatusMaster = () => {
   // Fetch operational statuses from API
   const fetchStatuses = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/operationalstatuses/?page=${pageNum}`);
+      const res = await get(`/master/operationalstatuses/?page=${pageNum}&order_by=-name`);
       setStatuses(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {

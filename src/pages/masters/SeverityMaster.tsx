@@ -68,7 +68,7 @@ const SeverityMaster = () => {
   // Fetch severities from API
   const fetchSeverities = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/severities/?page=${pageNum}`);
+      const res = await get(`/master/severities/?page=${pageNum}&order_by=-name`);
       setSeverities(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {

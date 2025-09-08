@@ -123,18 +123,22 @@ const HvacTrialForm = () => {
   });
 
   // ---------------- API calls ----------------
-  const fetchTrials = async () => {
-    try {
-      const res = await get("/shipmodule/trials/?page=1");
-      setTrials(res || []);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to load trials",
-        variant: "destructive",
-      });
-    }
-  };
+const fetchTrials = async () => {
+  try {
+    const res = await get("/shipmodule/trials/?page=1");
+
+    // Ensure we always set an array
+    const trialsData = res?.results ?? res?.data ?? res ?? [];
+    setTrials(Array.isArray(trialsData) ? trialsData : []);
+  } catch {
+    toast({
+      title: "Error",
+      description: "Failed to load trials",
+      variant: "destructive",
+    });
+  }
+};
+
 
   const fetchShips = async () => {
     try {

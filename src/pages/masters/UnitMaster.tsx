@@ -79,7 +79,7 @@ const UnitMaster = () => {
   // Fetch units from API
   const fetchUnits = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/units/?page=${pageNum}`);
+      const res = await get(`/master/units/?page=${pageNum}&order_by=-name`);
       setUnits(res.results || []);
       setTotalPages(Math.ceil(res.count / 10));
     } catch (err) {
@@ -273,38 +273,6 @@ const UnitMaster = () => {
           Next
         </Button>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Delete</DialogTitle>
-          </DialogHeader>
-          <div>Are you sure you want to delete this unit?</div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <DynamicFormDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        title="Confirm Delete"
-        description="Are you sure you want to delete this unit?"
-        fields={[]} // No fields for delete
-        onSubmit={handleDelete}
-        initialValues={{}}
-        trigger={null}
-      />
     </div>
   );
 };

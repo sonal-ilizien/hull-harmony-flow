@@ -68,7 +68,7 @@ const EquipmentMaster = () => {
   // Fetch equipments from API
   const fetchEquipments = async (pageNum: number = 1) => {
     try {
-      const res = await get(`/master/equipments/?page=${pageNum}`);
+      const res = await get(`/master/equipments/?page=${pageNum}&order_by=-name`);
       setEquipments(res.results || []);
       setTotalPages(Math.ceil((res.count || 0) / 10));
     } catch (err) {
