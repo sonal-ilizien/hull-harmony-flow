@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,6 @@ interface Vessel {
   year_of_build?: number;
   year_of_delivery?: number;
   active: number;
-  created_on: string;
-  created_by: number;
 }
 
 const VesselMaster = () => {
@@ -31,44 +29,117 @@ const VesselMaster = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVessel, setEditingVessel] = useState<Vessel | null>(null);
 
-  // Pagination
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Table columns
+  // Store for dynamic dropdown options
+  const [dropdownData, setDropdownData] = useState<Record<string, { label: string; value: number }[]>>({});
+
+  // ---------------- Fetch vessels ----------------
+  const fetchVessels = async (pageNum: number = 1) => {
+    try {
+      const res = await get(`/master/vessels/?page=${pageNum}&order_by=-name`);
+      setVessels(res.results || []);
+      setTotalPages(Math.ceil((res.count || 0) / 10));
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to fetch vessels", variant: "destructive" });
+    }
+  };
+
+  // ---------------- Fetch dropdowns dynamically ----------------
+  const fetchDropdowns = async () => {
+    const endpoints: Record<string, string> = {
+      classofvessel: "/master/classofvessels/",
+      vesseltype: "/master/vesseltypes/",
+      command: "/master/commands/",
+      yard: "/master/dockyards/",
+      active: "", // static options handled separately
+    };
+
+    const data: Record<string, { label: string; value: number }[]> = {};
+
+    await Promise.all(
+      Object.entries(endpoints).map(async ([key, api]) => {
+        if (!api) return;
+        try {
+          const res = await get(api);
+          const items = res.data || res.results || [];
+          data[key] = items.map((item: any) => ({ label: item.name, value: item.id }));
+        } catch (err) {
+          toast({ title: "Error", description: `Failed to fetch ${key}`, variant: "destructive" });
+        }
+      })
+    );
+
+    // Static dropdown for active status
+    data.active = [
+      { label: "Active", value: 1 },
+      { label: "Inactive", value: 0 },
+    ];
+
+    setDropdownData(data);
+  };
+
+  useEffect(() => {
+    fetchDropdowns();
+    fetchVessels(page);
+  }, [page]);
+
+  // ---------------- Save / Update ----------------
+  const handleSave = async (formData: any) => {
+    const payload = {
+      ...formData,
+      active: Number(formData.active),
+    };
+
+    try {
+      if (editingVessel) {
+        await put(`/master/vessels/${editingVessel.id}/`, payload);
+        toast({ title: "Success", description: "Vessel updated successfully" });
+      } else {
+        await post(`/master/vessels/`, payload);
+        toast({ title: "Success", description: "Vessel created successfully" });
+      }
+      fetchVessels(page);
+      setIsDialogOpen(false);
+      setEditingVessel(null);
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to save vessel", variant: "destructive" });
+    }
+  };
+
+  const handleEdit = (vessel: Vessel) => {
+    setEditingVessel(vessel);
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (confirm("Are you sure you want to delete this vessel?")) {
+      try {
+        await del(`/master/vessels/${id}/`);
+        toast({ title: "Success", description: "Vessel deleted successfully" });
+        fetchVessels(page);
+      } catch (err) {
+        toast({ title: "Error", description: "Failed to delete vessel", variant: "destructive" });
+      }
+    }
+  };
+
+  // ---------------- Columns ----------------
   const columns: Column<Vessel>[] = [
     { header: "Name", accessor: "name" },
     { header: "Code", accessor: "code" },
-    {
-      header: "Class",
-      accessor: "classofvessel",
-      render: (row) => row.classofvessel?.name || "-",
-    },
-    {
-      header: "Type",
-      accessor: "vesseltype",
-      render: (row) => row.vesseltype?.name || "-",
-    },
-    {
-      header: "Command",
-      accessor: "command",
-      render: (row) => row.command?.name || "-",
-    },
-    {
-      header: "Dockyard",
-      accessor: "yard",
-      render: (row) => row.yard?.name || "-",
-    },
+    { header: "Class", accessor: "classofvessel", render: (row) => row.classofvessel?.name || "-" },
+    { header: "Type", accessor: "vesseltype", render: (row) => row.vesseltype?.name || "-" },
+    { header: "Command", accessor: "command", render: (row) => row.command?.name || "-" },
+    { header: "Dockyard", accessor: "yard", render: (row) => row.yard?.name || "-" },
     { header: "Year Built", accessor: "year_of_build" },
     { header: "Year Delivered", accessor: "year_of_delivery" },
-    {
-      header: "Status",
-      accessor: "active",
-      render: (row) => (
+    { header: "Status", accessor: "active", render: (row) => (
         <Badge variant={row.active === 1 ? "default" : "secondary"}>
           {row.active === 1 ? "Active" : "Inactive"}
         </Badge>
-      ),
+      )
     },
     {
       header: "Actions",
@@ -86,140 +157,6 @@ const VesselMaster = () => {
     },
   ];
 
-  // Form fields - dropdowns populated from vessel data
-  const fields: FieldConfig[] = [
-    { name: "name", label: "Vessel Name", type: "text", required: true },
-    { name: "code", label: "Vessel Code", type: "text" },
-    {
-      name: "classofvessel",
-      label: "Class of Vessel",
-      type: "dropdown",
-      options: Array.from(new Set(vessels.map((v) => v.classofvessel.id))).map((id) => {
-        const item = vessels.find((v) => v.classofvessel.id === id);
-        return { label: item!.classofvessel.name, value: id };
-      }),
-      required: true,
-    },
-    {
-      name: "vesseltype",
-      label: "Vessel Type",
-      type: "dropdown",
-      options: Array.from(new Set(vessels.map((v) => v.vesseltype.id))).map((id) => {
-        const item = vessels.find((v) => v.vesseltype.id === id);
-        return { label: item!.vesseltype.name, value: id };
-      }),
-      required: true,
-    },
-    {
-      name: "command",
-      label: "Command",
-      type: "dropdown",
-      options: Array.from(new Set(vessels.map((v) => v.command.id))).map((id) => {
-        const item = vessels.find((v) => v.command.id === id);
-        return { label: item!.command.name, value: id };
-      }),
-      required: true,
-    },
-    {
-      name: "yard",
-      label: "Dockyard",
-      type: "dropdown",
-      options: Array.from(new Set(vessels.map((v) => v.yard.id))).map((id) => {
-        const item = vessels.find((v) => v.yard.id === id);
-        return { label: item!.yard.name, value: id };
-      }),
-    },
-    {
-      name: "year_of_build",
-      label: "Year of Build",
-      type: "number",
-    },
-    {
-      name: "year_of_delivery",
-      label: "Year of Delivery",
-      type: "number",
-    },
-    {
-      name: "active",
-      label: "Status",
-      type: "dropdown",
-      options: [
-        { label: "Active", value: "1" },
-        { label: "Inactive", value: "0" },
-      ],
-      required: true,
-    },
-  ];
-
-  // Fetch vessels
-  const fetchVessels = async (pageNum: number = 1) => {
-    try {
-      const res = await get(`/master/vessels/?page=${pageNum}&order_by=-name`);
-      setVessels(res.results || []);
-      setTotalPages(Math.ceil((res.count || 0) / 10));
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to fetch vessels",
-        variant: "destructive",
-      });
-    }
-  };
-
-  useEffect(() => {
-    fetchVessels(page);
-  }, [page]);
-
-  const handleSave = async (formData: any) => {
-    const payload = {
-      ...formData,
-      active: formData.active === "1" || formData.active === 1 ? 1 : 0,
-    };
-    try {
-      if (editingVessel) {
-        await put(`/master/vessels/${editingVessel.id}/`, payload);
-        toast({ title: "Success", description: "Vessel updated successfully" });
-      } else {
-        await post(`/master/vessels/`, payload);
-        toast({ title: "Success", description: "Vessel created successfully" });
-      }
-      fetchVessels(page);
-      setIsDialogOpen(false);
-      setEditingVessel(null);
-    } catch (err) {
-      toast({
-        title: "Error",
-        description: "Failed to save vessel",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleEdit = (vessel: Vessel) => {
-    setEditingVessel(vessel);
-    setIsDialogOpen(true);
-  };
-
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this vessel?")) {
-      try {
-        await del(`/master/vessels/${id}/`);
-        setVessels((prev) => prev.filter((v) => v.id !== id));
-        toast({
-          title: "Success",
-          description: "Vessel deleted successfully",
-        });
-        fetchVessels(page);
-      } catch (err) {
-        toast({
-          title: "Error",
-          description: "Failed to delete vessel",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
   const filteredVessels = vessels.filter(
     (v) =>
       v.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -227,48 +164,55 @@ const VesselMaster = () => {
       v.command?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // ---------------- Form Fields ----------------
+  const fields: FieldConfig[] = [
+    { name: "name", label: "Vessel Name", type: "text", required: true },
+    { name: "code", label: "Vessel Code", type: "text" },
+    { name: "classofvessel", label: "Class of Vessel", type: "dropdown", apiEndpoint: "/master/classofvessels/", required: true },
+    { name: "vesseltype", label: "Vessel Type", type: "dropdown", apiEndpoint: "/master/vesseltypes/", required: true },
+    { name: "command", label: "Command", type: "dropdown", apiEndpoint: "/master/commands/", required: true },
+    { name: "yard", label: "Dockyard", type: "dropdown", apiEndpoint: "/master/dockyards/" },
+    { name: "year_of_build", label: "Year of Build", type: "number" },
+    { name: "year_of_delivery", label: "Year of Delivery", type: "number" },
+   {
+    name: "active",
+    label: "Active",
+    type: "checkbox", // Checkbox type
+  },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-primary">Vessel Master</h1>
-          <p className="text-muted-foreground">
-            Manage naval vessels and their specifications
-          </p>
+          <p className="text-muted-foreground">Manage naval vessels and their specifications</p>
         </div>
+
         <DynamicFormDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           title={editingVessel ? "Edit Vessel" : "Add Vessel"}
-          description="Fill out the details below"
           fields={fields}
           onSubmit={handleSave}
-          initialValues={
-            editingVessel
-              ? {
-                  ...editingVessel,
-                  classofvessel: editingVessel.classofvessel.id,
-                  vesseltype: editingVessel.vesseltype.id,
-                  command: editingVessel.command.id,
-                  yard: editingVessel.yard.id,
-                  active: editingVessel.active === 1 ? "1" : "0",
-                }
-              : {}
-          }
+          initialValues={editingVessel ? {
+            ...editingVessel,
+            classofvessel: editingVessel.classofvessel.id,
+            vesseltype: editingVessel.vesseltype.id,
+            command: editingVessel.command.id,
+            yard: editingVessel.yard.id,
+            active: editingVessel.active,
+          } : {}}
           trigger={
-            <Button
-              onClick={() => {
-                setEditingVessel(null);
-                setIsDialogOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Vessel
+            <Button onClick={() => { setEditingVessel(null); setIsDialogOpen(true); }}>
+              <Plus className="mr-2 h-4 w-4" /> Add Vessel
             </Button>
           }
+          dropdownOptions={dropdownData} // <-- pass the dynamically fetched options
         />
       </div>
 
+      {/* Search */}
       <Card>
         <CardContent className="p-4">
           <div className="relative flex-1">
@@ -283,6 +227,7 @@ const VesselMaster = () => {
         </CardContent>
       </Card>
 
+      {/* Table */}
       <Card>
         <CardHeader>
           <CardTitle>Vessels</CardTitle>
@@ -292,16 +237,11 @@ const VesselMaster = () => {
         </CardContent>
       </Card>
 
+      {/* Pagination */}
       <div className="flex justify-center gap-2 mt-4">
-        <Button variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
-          Previous
-        </Button>
-        <span className="text-sm">
-          Page {page} of {totalPages}
-        </span>
-        <Button variant="outline" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>
-          Next
-        </Button>
+        <Button variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Previous</Button>
+        <span className="text-sm">Page {page} of {totalPages}</span>
+        <Button variant="outline" disabled={page === totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
       </div>
     </div>
   );

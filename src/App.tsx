@@ -25,7 +25,7 @@ import UserMaster from "@/pages/masters/UserMaster";
 import RootConfigMaster from "@/pages/masters/RootConfigMaster";
 import RoleMaster from "@/pages/masters/RoleMaster";
 import RoleAccess from "./pages/masters/RoleAccess";
-
+import Landing from "./pages/Landing";
 // Module imports
 import YardModule from "./pages/yard/YardModule";
 import ShipModule from "./pages/ship/ShipModule";
@@ -38,6 +38,7 @@ const App = () => (
       <Sonner />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/landing" element={<Landing />} />
         <Route path="/" element={<MainLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
